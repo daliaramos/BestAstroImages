@@ -1,60 +1,57 @@
-use std::net::SocketAddr;
+use std::error::Error;
+use std::net::{IpAddr, SocketAddr};
+use std::str::FromStr;
+use axum::Router;
+use axum::routing::{get, MethodRouter};
 use tokio::net::TcpListener;
 use hyper::{Body, Method, Response};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
+use dotenvy::dotenv;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
-    println!("Hello, world!");
-    let addr = SocketAddr::from(([127,0,0,1], 3000));
+async fn main() {
+    //grabs everthing in the .env file and makes it available.
+    dotenv().ok();
+    init_logging();
 
-    let listener = TcpListener::bind(addr).await.unwrap();
-    println!("Listening...");
+    let addr = get_host_from_end();
+
+    let app = Router::new()
+        .route("/questions", get(|| async {"Hello world!!"}));
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 
 
-    loop{
-    let (stream, _) = listener.accept().await.unwrap();
-
-    tokio::task::spawn(async move {
-        let http = Http::new();
-        let conn = http.serve_connection(stream, service_fn(questions_handler));
-        let conn = conn.await.unwrap();
-    });
-    }
 }
 
-async fn questions_handler(req: hyper::Request<Body>) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>>{
-    match(req.method(), req.uri().path()){
-        (&Method::GET, "/questions") => {
-            println!("In Get Questions");
-            Ok(Response::new("Body text".into()))
-        },
-        _ => {
-            todo!()
-        }
-    }
-}
-pub struct Question {
-    pub id: QuestionId,
-    pub title: String,
-    pub content: String,
-    pub tag: Option<String>
-}
-impl Question {
-    fn new(id: QuestionId, title:String, content: String, tag: Option<String>) -> Self {
-        Question{
-            id,
-            title,
-            content,
-            tag
+fn get_host_from_end() -> SocketAddr {
+    let host = std::env::var("API_HOST").unwrap();
+    let api_host = IpAddr::from_str(&host).unwrap();
+    let api_port: u16 = std::env::var("API_PORT")
+        .unwrap()
+        .parse()
+        .unwrap();
 
-        }
-    }
+    SocketAddr::from((api_host, api_port))
 }
-
-pub struct QuestionId(pub String);
-
+fn init_logging() {
+    // https://github.com/tokio-rs/axum/blob/main/examples/tracing-aka-logging
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "backend=trace,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+}
 
 
 
