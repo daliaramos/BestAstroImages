@@ -1,3 +1,8 @@
+mod db;
+mod routes;
+mod error;
+mod layers;
+
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
@@ -19,16 +24,21 @@ async fn main() {
 
     let addr = get_host_from_end();
 
-    let app = Router::new()
-        .route("/questions", get(|| async {"Hello world!!"}));
+    let (cors_layers, trace_layers) = layers::get_layers();
+   // let app = Router::new()
+   //     .route("/questions", get(hello_world));
+
+    let app = routes::get_router().layer(cors_layers).layer(trace_layers);
+
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
-
-
 }
 
+async fn hello_world() -> String {
+    "Hello World!".to_string()
+}
 fn get_host_from_end() -> SocketAddr {
     let host = std::env::var("API_HOST").unwrap();
     let api_host = IpAddr::from_str(&host).unwrap();
