@@ -45,3 +45,11 @@ pub struct CreateQuestion {
 pub struct GetQuestionById {
     pub question_id: u32,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateQuestion {
+    pub id: QuestionId,
+    pub title: String,
+    pub content: String,
+    pub tags: Option<Vec<String>>,
+}
