@@ -3,6 +3,7 @@ use tower_http::cors::{Any, CorsLayer};
 use http::Method;
 use tower_http::trace::TraceLayer;
 
+
 pub fn get_layers() -> (CorsLayer, TraceLayer<SharedClassifier<ServerErrorsAsFailures>>){
     let cors_layer = CorsLayer::new()
         .allow_origin(Any)

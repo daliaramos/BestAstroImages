@@ -30,7 +30,7 @@ impl Question {
     }
 }
 
-#[derive(Clone, Debug, Display, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Display, Serialize, Deserialize)]
 pub struct QuestionId(pub u32);
 
 // Clients use this to create new requests

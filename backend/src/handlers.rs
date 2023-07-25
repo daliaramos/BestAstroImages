@@ -3,7 +3,7 @@ use axum::Json;
 use crate::db::Store;
 use crate::error::{AppError, QuestionError};
 use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQuestionById};
-use crate::answer::Answer;
+//use crate::answer::{Answer, CreateAnswer};
 pub async fn root() -> String {
     "Hello World!".to_string()
 }
@@ -21,7 +21,7 @@ pub async fn get_questions_by_id(
     Path(query): Path<u32>,
 ) -> Result<Json<Question>, AppError> {
     let question = am_database.get_question_by_id(QuestionId(query))?;
-    Ok(Json(question));
+    Ok(Json(question))
 }
 
 pub async fn create_question(
@@ -34,11 +34,12 @@ pub async fn create_question(
 
 pub async fn update_question(
     State(mut am_database): State<Store>,
-    Json(question): Json<UpdateQuestion>
+    Json(question): Json<Question>,
 ) -> Result<Json<Question>, AppError> {
-    let update_question = am_database.update_question(question)?;
-    Ok(Json(Question))
+    let updated_question = am_database.update_question(question)?;
+    Ok(Json(updated_question))
 }
+
 
 pub async fn delete_question(
     State(mut am_database): State<Store>,
@@ -47,7 +48,7 @@ pub async fn delete_question(
     am_database.delete_question(QuestionId(query.question_id))?;
     Ok(())
 }
-
+/*
 pub async fn create_answer(
     State(mut am_database): State<Store>,
     Json(answer): Json<CreateAnswer>
@@ -55,3 +56,5 @@ pub async fn create_answer(
     let new_answer = am_database.add_answer(answer.content, answer.question_id);
     Ok(Json(new_answer))
 }
+
+ */

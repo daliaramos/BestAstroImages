@@ -2,8 +2,10 @@ mod db;
 mod routes;
 mod error;
 mod layers;
+//mod answer;
+mod handlers;
+mod question;
 
-use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use axum::Router;
@@ -16,8 +18,10 @@ use dotenvy::dotenv;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::error::AppError;
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), AppError> {
     //grabs everthing in the .env file and makes it available.
     dotenv().ok();
     init_logging();
@@ -28,12 +32,14 @@ async fn main() {
    // let app = Router::new()
    //     .route("/questions", get(hello_world));
 
-    let app = routes::get_router().layer(cors_layers).layer(trace_layers);
+    let app = routes::get_router().await?.layer(cors_layers).layer(trace_layers);
 
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 async fn hello_world() -> String {

@@ -1,6 +1,8 @@
 use derive_more::Display;
+use crate::question::QuestionId;
 use serde_derive::{Deserialize, Serialize};
 
+/*
 #[derive(Clone, Debug, Display, Serialize, Deserialize)]
 pub struct Answer {
     pub id: AnswerId,
@@ -21,3 +23,6 @@ pub struct CreateAnswer{
     pub content: String,
     pub question_id: QuestionId
 }
+
+
+ */
