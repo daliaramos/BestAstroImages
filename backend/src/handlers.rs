@@ -27,8 +27,8 @@ pub async fn get_questions_by_id(
 pub async fn create_question(
     State(mut am_database): State<Store>,
     Json(question): Json<CreateQuestion>
-) -> Result<Json<Question>, AppError> {
-    let new_question = am_database.add_question(question.title, question.content, question.tags)?;
+) -> Result<Json<()>, AppError> {
+    let new_question = am_database.add_question(question.title, question.content, question.tags).await?;
     Ok(Json(new_question)) //ORM - object relational mapper
 }
 

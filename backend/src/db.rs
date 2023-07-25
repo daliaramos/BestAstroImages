@@ -1,15 +1,17 @@
 use std::sync::{Arc, Mutex, RwLock};
+use sqlx::{PgPool, Pool, Postgres};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::atomic::AtomicUsize;
 //use crate::answer::{Answer, AnswerId};
 use crate::error::{AppError, QuestionError};
 use crate::question::{Question, QuestionId};
+use tracing::info;
 
-
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Store {
     pub questions: Arc<Mutex<Vec<Question>>>,
   //  pub answers: Arc<RwLock<Vec<Answer>>>,
+  pub conn_pool: PgPool
 }
 
 // think of Arc<>  as a shared ptr.
@@ -17,7 +19,7 @@ impl Store {
     pub async fn initialize_database_connection() -> Result<Self, AppError> {
         let db_url = std::env::var("DATABASE_URL").unwrap();
 
-        let pool = PgPoolOptions::new()
+        let mut pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(&db_url).await?;
 
@@ -27,20 +29,12 @@ impl Store {
             .fetch_one(&pool).await?;
 
         assert_eq!(row.0, 150);
-        let store = Store::default();
+        info!("Database test result: {}", row.0);
+        let store = Store {
+            questions: Arc::new(Mutex::new(vec![])),
+            conn_pool: pool,
+        };
         Ok(store)
-    }
-
-    pub fn init(&mut self) -> Result<(), AppError> {
-        let question = Question::new(
-            QuestionId(0),
-            "How".to_string(),
-            "Please help".to_string(),
-            Some(vec!["general".to_string()])
-        );
-        let tags = Some(vec!["general".to_string()]).unwrap();
-        self.add_question("How do i?".to_string(), "Help me".to_string(), Some(tags))?;
-        Ok(())
     }
 /*
     pub fn add_answer(&mut self, content: String, question_id:QuestionId) -> Result<Answer, AppError> {
@@ -58,14 +52,19 @@ impl Store {
 
 
  */
-    pub fn add_question(&mut self, title: String, content: String, tags: Option<Vec<String>>) -> Result<Question, AppError> {
-        let mut questions = self.questions.lock().expect("Poisoned mutex");
-
-        let len = questions.len();
-
-        let new_question = Question::new(QuestionId(len as u32), title, content, tags);
-        questions.push(new_question.clone());
-        Ok(new_question)
+    pub async fn add_question(&mut self, title: String, content: String, tags: Option<Vec<String>>) -> Result<(), AppError> {
+       let mut rows = sqlx::query!(
+           r#"INSERT INTO "questions"(title, content, tags)
+           VALUES ($1, $2, $3)
+           "#,
+           title,
+           content,
+           tags.as_deref()
+       )
+           .execute(&self.conn_pool).await?;
+       // let new_question = Question::new(QuestionId(len as u32), title, content, tags);
+       // questions.push(new_question.clone());
+        Ok(())
     }
 
     pub fn get_all_questions(&self) -> Vec<Question> {
