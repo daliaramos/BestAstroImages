@@ -1,14 +1,14 @@
-use derive_more::Display;
-use crate::question::QuestionId;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-/*
-#[derive(Clone, Debug, Display, Serialize, Deserialize)]
+use crate::question::QuestionId;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Answer {
     pub id: AnswerId,
     pub content: String,
     pub question_id: QuestionId,
 }
+
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AnswerId(pub i32);
 
@@ -18,11 +18,8 @@ impl From<i32> for AnswerId {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CreateAnswer{
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateAnswer {
     pub content: String,
-    pub question_id: QuestionId
+    pub question_id: i32,
 }
-
-
- */
