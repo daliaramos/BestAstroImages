@@ -1,3 +1,13 @@
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "email@email.com",
+  "password": "password",
+  "confirm_password": "password"
+}
+
+###
 POST http://localhost:3000/question
 Content-Type: application/json
 

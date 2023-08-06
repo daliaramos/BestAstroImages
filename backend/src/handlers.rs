@@ -4,6 +4,8 @@ use crate::db::Store;
 use crate::error::{AppError};
 use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQuestionById};
 use crate::answer::{Answer, CreateAnswer};
+use crate::user::{UserSignup};
+use serde_json::{json, Value};
 pub async fn root() -> String {
     "Hello World!".to_string()
 }
@@ -57,4 +59,27 @@ pub async fn create_answer(
     dbg!(&answer);
     let new_answer = am_database.add_answer(answer.content, answer.question_id).await?;
     Ok(Json(new_answer))
+}
+
+pub async fn register(
+    State(mut database) : State<Store>,
+    Json(credentials): Json<UserSignup>
+) -> Result<Json<Value>, AppError> {
+    if credentials.email.is_empty() || credentials.password.is_empty() {
+        return Err(AppError::MissingCredentials)
+    }
+
+    if credentials.password != credentials.confirm_password {
+        return Err(AppError::MissingCredentials)
+    }
+
+    //check to see if there is already a user in the db w the given email address
+    let existing_user = database.get_user(&credentials.email).await;
+
+    if let Ok(_) = existing_user {
+        return Err(AppError::UserAlreadyExists);
+    }
+
+    let new_user = database.create_user(credentials).await?;
+    Ok(new_user)
 }

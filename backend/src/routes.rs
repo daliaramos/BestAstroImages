@@ -27,8 +27,8 @@ pub async fn app(pool: PgPool) -> Router {
         .route("/question", delete(handlers::delete_question))
 
         .route("/answer", post(handlers::create_answer))
-
-
+        .route("/users", post(handlers::register))
+        //.route("/image", post(handlers::create_image))
         .route("/*_", get(handle_404))
         .layer(cors_layer)
         .layer(trace_layer)

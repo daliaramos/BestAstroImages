@@ -1,19 +1,20 @@
 use std::sync::{Arc, Mutex, RwLock};
-
+use serde_json::Value;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
-
+use axum::Json;
 use crate::answer::{Answer, AnswerId};
 use crate::error::AppError;
 use crate::question::{IntoQuestionId, Question, QuestionId, UpdateQuestion};
-
+//use crate::image::{Image};
+use crate::user::{User, UserSignup};
 #[derive(Clone)]
 pub struct Store {
     pub conn_pool: PgPool,
     pub questions: Arc<Mutex<Vec<Question>>>,
     pub answers: Arc<RwLock<Vec<Answer>>>,
-
+  //  pub images: Arc<Mutex<Vec<Image>>>
 
 }
 
@@ -197,6 +198,36 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
             .await.unwrap();
 
         Ok(())
+    }
+
+    pub async fn get_user(&self, email: &str) -> Result<User, AppError> {
+      let user = sqlx::query_as::<_, User>(
+          r#"
+            SELECT email FROM users WHERE email = $1 $2
+          "#
+      )
+          .bind(email)
+          .fetch_one(&self.conn_pool)
+          .await?;
+
+        Ok(user)
+    }
+
+    pub async fn create_user(&self, user: UserSignup) -> Result<Json<Value>, AppError> {
+        let result = sqlx::query("INSERT INTO users(email, password) values($1, $2)")
+            .bind(&user.email)
+            .bind(&user.password)
+            .execute(&self.conn_pool)
+            .await
+            .map_err(|_| AppError::InternalServerError)?;
+
+        if result.rows_affected() < 1 {
+            Err(AppError::InternalServerError)
+        }else{
+            Ok(Json(serde_json::json!({"message": "User created successfully"})))
+        }
+
+
     }
 }
 

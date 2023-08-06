@@ -10,5 +10,14 @@ async fn main() -> anyhow::Result<()> {
 
     let body = response.text().await?;
     println!("{}", body);
+
+    //APOD
+    let response = client.get("https://api.nasa.gov/planetary/apod?api_key=OzpcTPWl9C57laK3tZT4bz8mL87oJXW2PfDkTS5f&count=6")
+        .send()
+        .await?;
+
+    let body = response.text().await?;
+    println!("{}", body);
+
     Ok(())
 }

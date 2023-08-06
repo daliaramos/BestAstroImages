@@ -8,6 +8,11 @@ use sqlx::Error;
 pub enum AppError {
     Question(QuestionError),
     Database(sqlx::Error),
+    MissingCredentials,
+    UserDoesNotExist,
+    UserAlreadyExists,
+    InvalidToken,
+    InternalServerError,
     #[allow(dead_code)]
     Any(anyhow::Error)
 }
@@ -24,6 +29,11 @@ impl IntoResponse for AppError {
                 QuestionError::InvalidId => (StatusCode::NOT_FOUND, err.to_string()),
             },
             AppError::Database(err) => (StatusCode::SERVICE_UNAVAILABLE, err.to_string()),
+            AppError::MissingCredentials => (StatusCode::UNAUTHORIZED, "Your credentials where missing or incorrect".to_string()),
+            AppError::UserDoesNotExist => (StatusCode::UNAUTHORIZED, "Your account does not exist".to_string()),
+            AppError::UserAlreadyExists => (StatusCode::UNAUTHORIZED, "There is already an account with that email address".to_string()),
+            AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token".to_string()),
+            AppError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Something horrible happened".to_string()),
             AppError::Any(err) => {
                 let message = format!("Internal server error! {}", err);
                 (StatusCode::INTERNAL_SERVER_ERROR, message)
