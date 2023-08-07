@@ -4,7 +4,9 @@ use crate::db::Store;
 use crate::error::{AppError};
 use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQuestionById};
 use crate::answer::{Answer, CreateAnswer};
-use crate::user::{UserSignup};
+use jsonwebtoken::Header;
+use crate::get_timestamp_after_8_hours;
+use crate::user::{UserSignup, Claims, User, KEYS};
 use serde_json::{json, Value};
 pub async fn root() -> String {
     "Hello World!".to_string()
@@ -82,4 +84,39 @@ pub async fn register(
 
     let new_user = database.create_user(credentials).await?;
     Ok(new_user)
+}
+
+pub async fn login(
+    State(mut database): State<Store>,
+    Json(creds): Json<User>
+) -> Result<Json<Value>, AppError> {
+    if creds.email.is_empty() || creds.password.is_empty() {
+        return Err(AppError::MissingCredentials)
+    }
+
+    let existing_user = database.get_user(&creds.email).await?;
+
+    if existing_user.password != creds.password {
+        Err(AppError::MissingCredentials)
+    } else{
+        //create jwt to return
+        let claims = Claims {
+            id: 0,
+            email: creds.email.to_owned(),
+            exp: get_timestamp_after_8_hours(),
+        };
+
+        let token = jsonwebtoken::encode(&Header::default(), &claims, &KEYS.encoding)
+            .map_err(|_| AppError::MissingCredentials)?;
+        Ok(Json(json!({ "access_token" : token, "type": "Bearer"})))
+    }
+}
+
+pub async fn protected (
+    claims: Claims,
+) -> Result<String, AppError> {
+    Ok(format!(
+        "Welcome to the PROTECTED area \n your claim data is: {}",
+        claims
+    ))
 }

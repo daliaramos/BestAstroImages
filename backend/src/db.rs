@@ -203,7 +203,7 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
     pub async fn get_user(&self, email: &str) -> Result<User, AppError> {
       let user = sqlx::query_as::<_, User>(
           r#"
-            SELECT email FROM users WHERE email = $1 $2
+            SELECT email, password FROM users WHERE email = $1
           "#
       )
           .bind(email)

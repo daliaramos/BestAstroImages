@@ -1,6 +1,6 @@
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
-
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use dotenvy::dotenv;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
@@ -56,4 +56,14 @@ fn init_logging() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+}
+
+pub fn get_timestamp_after_8_hours() -> u64 {
+    let now = SystemTime::now();
+    let since_epoch = now.duration_since(UNIX_EPOCH)
+        .expect("Time somehow went backwards");
+
+    let eight_hours = since_epoch + Duration::from_secs(28800);
+    eight_hours.as_secs()
+
 }
