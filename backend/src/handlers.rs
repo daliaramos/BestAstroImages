@@ -1,3 +1,4 @@
+use argon2::Config;
 use axum::extract::{Path,Query, State};
 use axum::Json;
 use crate::db::Store;
@@ -65,7 +66,7 @@ pub async fn create_answer(
 
 pub async fn register(
     State(mut database) : State<Store>,
-    Json(credentials): Json<UserSignup>
+    Json(mut credentials): Json<UserSignup>
 ) -> Result<Json<Value>, AppError> {
     if credentials.email.is_empty() || credentials.password.is_empty() {
         return Err(AppError::MissingCredentials)
@@ -75,6 +76,7 @@ pub async fn register(
         return Err(AppError::MissingCredentials)
     }
 
+
     //check to see if there is already a user in the db w the given email address
     let existing_user = database.get_user(&credentials.email).await;
 
@@ -82,6 +84,20 @@ pub async fn register(
         return Err(AppError::UserAlreadyExists);
     }
 
+
+    let hash_config = Config::default();
+    let salt = std::env::var("SALT").expect("Missing SALT");
+    let hash_password = match argon2::hash_encoded(
+        credentials.password.as_bytes(),
+        salt.as_bytes(),
+        &hash_config
+    ){
+        Ok(result) => result,
+        Err(_) => {
+            return Err(AppError::Any(anyhow::anyhow!("Password hashing failed")));
+        }
+    };
+    credentials.password = hash_password;
     let new_user = database.create_user(credentials).await?;
     Ok(new_user)
 }
@@ -96,9 +112,20 @@ pub async fn login(
 
     let existing_user = database.get_user(&creds.email).await?;
 
-    if existing_user.password != creds.password {
-        Err(AppError::MissingCredentials)
-    } else{
+
+    let is_password_correct =
+        match argon2::verify_encoded(&*existing_user.password, creds.password.as_bytes()) {
+            Ok(result) => result,
+            Err(_) => {
+                return Err(AppError::InternalServerError);
+            }
+        };
+
+    if !is_password_correct {
+        return Err(AppError::InvalidPassword);
+    }
+
+
         //create jwt to return
         let claims = Claims {
             id: 0,
@@ -109,7 +136,7 @@ pub async fn login(
         let token = jsonwebtoken::encode(&Header::default(), &claims, &KEYS.encoding)
             .map_err(|_| AppError::MissingCredentials)?;
         Ok(Json(json!({ "access_token" : token, "type": "Bearer"})))
-    }
+
 }
 
 pub async fn protected (

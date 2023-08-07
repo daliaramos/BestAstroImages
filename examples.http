@@ -3,7 +3,7 @@ POST http://localhost:3000/login
 Content-Type: application/json
 
 {
-  "email": "email@email.com",
+  "email": "email12@email.com",
   "password": "password"
 
 }
@@ -11,7 +11,7 @@ Content-Type: application/json
 ###
 GET http://localhost:3000/protected
 Accept: application/json
-Authorization: Bearer 1eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MCwiZW1haWwiOiJlbWFpbEBlbWFpbC5jb20iLCJleHAiOjE2OTEzOTgwNDB9.R-KL-jZp7ViIui8SEzUk4D1ca7xUEiVzt3FPLU8G0_U
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MCwiZW1haWwiOiJlbWFpbDEyQGVtYWlsLmNvbSIsImV4cCI6MTY5MTQwNjM5MX0.zljDIX3NjUoucSIbryIV288i62fY0d8Ko_kdX2Bknb8
 
 
 ###
@@ -19,7 +19,7 @@ POST http://localhost:3000/users
 Content-Type: application/json
 
 {
-  "email": "email@email.com",
+  "email": "email12@email.com",
   "password": "password",
   "confirm_password": "password"
 }
