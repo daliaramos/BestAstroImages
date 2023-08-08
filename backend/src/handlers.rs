@@ -9,6 +9,9 @@ use jsonwebtoken::Header;
 use crate::get_timestamp_after_8_hours;
 use crate::user::{UserSignup, Claims, User, KEYS};
 use serde_json::{json, Value};
+use std::fs;
+
+
 pub async fn root() -> String {
     "Hello World!".to_string()
 }
@@ -104,7 +107,7 @@ pub async fn register(
 
 pub async fn login(
     State(mut database): State<Store>,
-    Json(creds): Json<User>
+    Json( creds): Json<User>
 ) -> Result<Json<Value>, AppError> {
     if creds.email.is_empty() || creds.password.is_empty() {
         return Err(AppError::MissingCredentials)
@@ -126,16 +129,19 @@ pub async fn login(
     }
 
 
-        //create jwt to return
-        let claims = Claims {
-            id: 0,
-            email: creds.email.to_owned(),
-            exp: get_timestamp_after_8_hours(),
-        };
+    if existing_user.status == "Ban".to_string() {
+        return Err(AppError::AccountBanned);
+    }
+    //create jwt to return
+    let claims = Claims {
+        id: 0,
+        email: creds.email.to_owned(),
+        exp: get_timestamp_after_8_hours(),
+    };
 
-        let token = jsonwebtoken::encode(&Header::default(), &claims, &KEYS.encoding)
-            .map_err(|_| AppError::MissingCredentials)?;
-        Ok(Json(json!({ "access_token" : token, "type": "Bearer"})))
+    let token = jsonwebtoken::encode(&Header::default(), &claims, &KEYS.encoding)
+        .map_err(|_| AppError::MissingCredentials)?;
+    Ok(Json(json!({ "access_token" : token, "type": "Bearer"})))
 
 }
 
@@ -146,4 +152,37 @@ pub async fn protected (
         "Welcome to the PROTECTED area \n your claim data is: {}",
         claims
     ))
+}
+
+pub async fn check_violation(
+    State(mut am_database): State<Store>,
+    Path(query): Path<i32>,
+) -> Result<Json<String>, AppError> {
+    let all_questions = am_database.get_question_by_id(QuestionId(query)).await?;
+
+    let contents = fs::read_to_string("./src/badwords.txt")
+        .expect("Should have been able to read the file");
+
+    let mut vec: Vec<String> = vec![];
+    for substring in contents.split("\r\n") {
+        vec.push(substring.to_string())
+    }
+
+
+    let message = all_questions.content.clone().to_string();
+
+    let mut a = "no bad word".to_string();
+    for words in message.split(" ") {
+        if vec.contains(&words.to_string()) {
+            a = "bad word".to_string();
+        }
+    }
+
+    let user = am_database.get_user_by_questionID(*all_questions.id).await?;
+    if a == "true".to_string(){
+        am_database.update_status(user).await?;
+    }
+
+    Ok(Json(a.to_string()))
+
 }

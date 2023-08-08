@@ -79,8 +79,8 @@ impl Store {
     pub async fn get_all_questions(&mut self) -> Result<Vec<Question>, AppError> {
         let rows = sqlx::query!(
             r#"
-SELECT * FROM questions
-"#
+            SELECT * FROM questions
+            "#
         )
             .fetch_all(&self.conn_pool)
             .await?;
@@ -203,7 +203,7 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
     pub async fn get_user(&self, email: &str) -> Result<User, AppError> {
       let user = sqlx::query_as::<_, User>(
           r#"
-            SELECT email, password FROM users WHERE email = $1
+            SELECT email, password, user_role, status, question_id FROM users WHERE email = $1
           "#
       )
           .bind(email)
@@ -213,6 +213,18 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
         Ok(user)
     }
 
+    pub async fn get_user_by_questionID(&self, questionID: i32) -> Result<User, AppError> {
+        let user = sqlx::query_as::<_, User>(
+            r#"
+            SELECT email, password, user_role, status, question_id FROM users WHERE question_id = $1
+          "#
+        )
+            .bind(questionID)
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        Ok(user)
+    }
     pub async fn create_user(&self, user: UserSignup) -> Result<Json<Value>, AppError> {
         let result = sqlx::query("INSERT INTO users(email, password) values($1, $2)")
             .bind(&user.email)
@@ -229,6 +241,42 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
 
 
     }
+
+    pub async fn update_status(
+        &mut self,
+        new_status: User,
+    ) -> Result<User, AppError> {
+        sqlx::query!(
+            r#"
+                UPDATE users
+                SET status = $1,
+                WHERE question_id = $2
+            "#,
+            new_status.status,
+            new_status.email,
+        )
+            .execute(&self.conn_pool)
+            .await?;
+
+        let row = sqlx::query!(
+            r#"
+                SELECT email, status FROM users WHERE question_id = $1
+            "#,
+            new_status.question_id,
+            new_status.status
+        )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let status = User {
+            email: row.email,
+            status: row.staus,
+        };
+
+        Ok(status)
+    }
+
+
 }
 
 

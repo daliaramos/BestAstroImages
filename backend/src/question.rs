@@ -1,6 +1,6 @@
 use derive_more::Display;
 use serde_derive::{Deserialize, Serialize};
-
+use crate::user::UserId;
 // This uses the `derive_more` crate to reduce the Display boilerplate (see below)
 #[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
 #[display(
@@ -15,17 +15,19 @@ pub struct Question {
     pub title: String,
     pub content: String,
     pub tags: Option<Vec<String>>,
+    pub user_id: UserId,
 }
 
 
 impl Question {
     #[allow(dead_code)]
-    pub fn new(id: QuestionId, title: String, content: String, tags: Option<Vec<String>>) -> Self {
+    pub fn new(id: QuestionId, title: String, content: String, tags: Option<Vec<String>>, user_id: UserId) -> Self {
         Question {
             id,
             title,
             content,
             tags,
+            user_id
         }
     }
 }
@@ -68,6 +70,7 @@ pub struct CreateQuestion {
     pub title: String,
     pub content: String,
     pub tags: Option<Vec<String>>,
+    pub user_id: UserId
 }
 
 #[derive(Deserialize)]

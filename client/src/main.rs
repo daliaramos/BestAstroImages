@@ -4,12 +4,6 @@ use reqwest::Client;
 async fn main() -> anyhow::Result<()> {
     let client = Client::new();
 
-    let response = client.get("http://localhost:3000/questions")
-        .send()
-        .await?;
-
-    let body = response.text().await?;
-    println!("{}", body);
 
     //APOD
     let response = client.get("https://api.nasa.gov/planetary/apod?api_key=OzpcTPWl9C57laK3tZT4bz8mL87oJXW2PfDkTS5f&count=6")
@@ -19,5 +13,12 @@ async fn main() -> anyhow::Result<()> {
     let body = response.text().await?;
     println!("{}", body);
 
+
+    let response = client.get("https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/badwordslist/badwords.txt")
+        .send()
+        .await?;
+
+    let body = response.text().await?;
+    println!("{}", body);
     Ok(())
 }

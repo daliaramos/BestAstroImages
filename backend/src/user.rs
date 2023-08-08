@@ -9,13 +9,25 @@ use once_cell::sync::Lazy;
 use crate::error::AppError;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::decode;
-
+use crate::question::QuestionId;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct User{
+    pub id: UserId,
     pub email: String,
     pub password: String,
+    pub user_role: String,
+    pub status: String,
 }
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UserId(pub i32);
+
+impl From<i32> for UserId {
+    fn from(value: i32) -> Self {
+        Self(value)
+    }
+}
+
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSignup{
@@ -26,6 +38,12 @@ pub struct UserSignup{
 
 pub struct LoggedInUser{
     pub token: Claims
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateStatus {
+    pub email: String,
+    pub status: String
 }
 
 #[derive(Serialize, Deserialize, derive_more::Display)]
