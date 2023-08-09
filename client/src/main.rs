@@ -6,19 +6,26 @@ async fn main() -> anyhow::Result<()> {
 
 
     //APOD
-    let response = client.get("https://api.nasa.gov/planetary/apod?api_key=OzpcTPWl9C57laK3tZT4bz8mL87oJXW2PfDkTS5f&count=6")
+    let astroObj = client.get("https://api.nasa.gov/planetary/apod?api_key=OzpcTPWl9C57laK3tZT4bz8mL87oJXW2PfDkTS5f&count=6")
         .send()
         .await?;
 
-    let body = response.text().await?;
+    let body = astroObj.text().await?;
     println!("{}", body);
 
 
-    let response = client.get("https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/badwordslist/badwords.txt")
-        .send()
-        .await?;
 
-    let body = response.text().await?;
-    println!("{}", body);
+
+    //When a user liked an image save it to the image table
+     let res = client
+         .post("http://localhost:3000/image")
+         .header("Content-Type", "application/json")
+         .body("JSON BODY")
+         .send().await?;
+
+     let body = res.text().await?;
+     println!("POST Response: {}", body);
+
+
     Ok(())
 }

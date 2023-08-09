@@ -13,7 +13,8 @@ pub struct Question {
     pub id: QuestionId,
     pub title: String,
     pub content: String,
-   // pub user_id: UserId,
+
+  //  pub user_id: UserId,
 }
 
 
@@ -24,8 +25,6 @@ impl Question {
             id,
             title,
             content,
-
-          //  user_id
         }
     }
 }
@@ -67,6 +66,7 @@ impl IntoQuestionId for QuestionId {
 pub struct CreateQuestion {
     pub title: String,
     pub content: String,
+    pub tags: Option<Vec<String>>,
   //  pub user_id: UserId
 }
 
@@ -81,5 +81,6 @@ pub struct UpdateQuestion {
     pub id: QuestionId,
     pub title: String,
     pub content: String,
+    pub tags: Option<Vec<String>>,
 }
 

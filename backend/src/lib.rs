@@ -16,6 +16,7 @@ pub mod layers;
 pub mod question;
 pub mod routes;
 pub mod user;
+pub mod image;
 
 pub async fn run_backend() {
     dotenv().ok();

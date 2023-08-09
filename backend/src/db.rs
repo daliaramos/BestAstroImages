@@ -7,7 +7,7 @@ use axum::Json;
 use crate::answer::{Answer, AnswerId};
 use crate::error::AppError;
 use crate::question::{IntoQuestionId, Question, QuestionId, UpdateQuestion};
-//use crate::image::{Image};
+use crate::image::{Image, CreateImage, ImageId};
 use crate::user::{User, UserSignup, UpdateUser, UserCred};
 #[derive(Clone)]
 pub struct Store {
@@ -132,7 +132,7 @@ impl Store {
     ) -> Result<(), AppError> {
         sqlx::query!(
             r#"INSERT INTO "questions"(title, content)
-           VALUES ($1, $2, $3)
+           VALUES ($1, $2)
         "#,
             title,
             content,
@@ -151,7 +151,7 @@ impl Store {
             r#"
     UPDATE questions
     SET title = $1, content = $2
-    WHERE id = $4
+    WHERE id = $3
     "#,
             new_question.title,
             new_question.content,
@@ -162,8 +162,8 @@ impl Store {
 
         let row = sqlx::query!(
         r#"
-SELECT title, content, id FROM questions WHERE id = $1
-"#,
+            SELECT title, content, id FROM questions WHERE id = $1
+        "#,
         new_question.id.0,
     )
             .fetch_one(&self.conn_pool)
@@ -301,6 +301,30 @@ SELECT title, content, id FROM questions WHERE id = $1
             .await.unwrap();
 
         Ok(())
+    }
+
+    pub async fn add_image(
+        &mut self,
+        img: CreateImage,
+    ) -> Result<Image, AppError> {
+        let res = sqlx::query!(
+            r#"
+                INSERT INTO images (id, image_url)
+                VALUES ($1, $2)
+                RETURNING *
+            "#,
+            img.id,
+            img.image_url,
+        )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let image = Image {
+            id: ImageId(res.id),
+            image_url: res.image_url,
+        };
+
+        Ok(image)
     }
 /*
     pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {

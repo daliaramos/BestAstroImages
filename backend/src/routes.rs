@@ -33,7 +33,7 @@ pub async fn app(pool: PgPool) -> Router {
         .route("/login", post(handlers::login))
 
         //.route("/users?email=email", get(handlers::get_user))
-        //.route("/image", post(handlers::create_image))
+        .route("/image", post(handlers::create_image))
      //   .route("/report/:question_id", get(handlers::check_violation))
         .route("/protected", get(handlers::protected))
         .route("/*_", get(handle_404))

@@ -5,6 +5,7 @@ use crate::db::Store;
 use crate::error::{AppError};
 use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQuestionById};
 use crate::answer::{Answer, CreateAnswer};
+use crate::image::{Image, CreateImage};
 use jsonwebtoken::Header;
 use crate::get_timestamp_after_8_hours;
 use crate::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred};
@@ -189,6 +190,16 @@ pub async fn delete_user(
     }
     Ok(())
 }
+
+pub async fn create_image(
+    State(mut am_database): State<Store>,
+    Json(img): Json<CreateImage>,
+) -> Result<Json<Image>, AppError> {
+    let new_image = am_database.add_image(img).await?;
+    Ok(Json(new_image))
+}
+
+
 /*
 pub async fn check_violation(
     State(mut am_database): State<Store>,

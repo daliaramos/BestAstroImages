@@ -4,28 +4,22 @@ use serde_derive::{Deserialize, Serialize};
 // This uses the `derive_more` crate to reduce the Display boilerplate (see below)
 #[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
 #[display(
-fmt = "id: {}, title: {}, content: {}, tags: {:?}",
+fmt = "id: {}, image_url: {}",
 id,
-title,
-content,
-tags
+image_url
 )]
 pub struct Image {
     pub id: ImageId,
-    pub title: String,
-    pub content: String,
-    pub tags: Option<Vec<String>>,
+    pub image_url: String,
 }
 
 
 impl Image {
     #[allow(dead_code)]
-    pub fn new(id: ImageId, title: String, content: String, tags: Option<Vec<String>>) -> Self {
+    pub fn new(id: ImageId, image_url: String) -> Self {
         Image {
             id,
-            title,
-            content,
-            tags,
+            image_url
         }
     }
 }
@@ -39,4 +33,7 @@ impl From<i32> for ImageId {
     }
 }
 
-
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateImage {
+    pub image_url: String,
+}
