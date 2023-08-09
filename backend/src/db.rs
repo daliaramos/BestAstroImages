@@ -92,7 +92,6 @@ impl Store {
                     id: row.id.into(), // Assuming you have a From<u32> for QuestionId
                     title: row.title,
                     content: row.content,
-                    tags: row.tags,
                     //user_id: row.user_id
                 }
             })
@@ -120,7 +119,6 @@ impl Store {
             id: row.id.into(), // Assuming you have a From<u32> for QuestionId
             title: row.title,
             content: row.content,
-            tags: row.tags,
            // user_id: UserId(row.user_id.unwrap())
         };
 
@@ -131,15 +129,13 @@ impl Store {
         &mut self,
         title: String,
         content: String,
-        tags: Option<Vec<String>>,
     ) -> Result<(), AppError> {
         sqlx::query!(
-            r#"INSERT INTO "questions"(title, content, tags)
+            r#"INSERT INTO "questions"(title, content)
            VALUES ($1, $2, $3)
         "#,
             title,
             content,
-            tags.as_deref()
         )
             .execute(&self.conn_pool)
             .await?;
@@ -154,12 +150,11 @@ impl Store {
         sqlx::query!(
             r#"
     UPDATE questions
-    SET title = $1, content = $2, tags = $3
+    SET title = $1, content = $2
     WHERE id = $4
     "#,
             new_question.title,
             new_question.content,
-            new_question.tags.as_deref(),
             new_question.id.0,
         )
             .execute(&self.conn_pool)
@@ -167,7 +162,7 @@ impl Store {
 
         let row = sqlx::query!(
         r#"
-SELECT title, content, id, tags FROM questions WHERE id = $1
+SELECT title, content, id FROM questions WHERE id = $1
 "#,
         new_question.id.0,
     )
@@ -178,7 +173,6 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
             title: row.title,
             content: row.content,
             id: QuestionId(row.id),
-            tags: row.tags,
             //user_id: UserId(row.user_id.unwrap())
         };
 
@@ -193,8 +187,8 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
         println!("DELETE - Question id is {}", &question_id);
         sqlx::query!(
             r#"
-    DELETE FROM questions WHERE id = $1
-    "#,
+                DELETE FROM questions WHERE id = $1
+            "#,
             question_id.0,
         )
             .execute(&self.conn_pool)

@@ -37,7 +37,7 @@ pub async fn create_question(
     State(mut am_database): State<Store>,
     Json(question): Json<CreateQuestion>
 ) -> Result<Json<()>, AppError> {
-    let new_question = am_database.add_question(question.title, question.content, question.tags).await?;
+    let new_question = am_database.add_question(question.title, question.content).await?;
     Ok(Json(new_question)) //ORM - object relational mapper
 }
 
