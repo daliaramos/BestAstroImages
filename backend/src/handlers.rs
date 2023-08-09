@@ -7,7 +7,7 @@ use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQ
 use crate::answer::{Answer, CreateAnswer};
 use jsonwebtoken::Header;
 use crate::get_timestamp_after_8_hours;
-use crate::user::{UserSignup, Claims, User, KEYS};
+use crate::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred};
 use serde_json::{json, Value};
 use std::fs;
 
@@ -67,6 +67,8 @@ pub async fn create_answer(
     Ok(Json(new_answer))
 }
 
+
+//Create user account
 pub async fn register(
     State(mut database) : State<Store>,
     Json(mut credentials): Json<UserSignup>
@@ -79,14 +81,12 @@ pub async fn register(
         return Err(AppError::MissingCredentials)
     }
 
-
     //check to see if there is already a user in the db w the given email address
     let existing_user = database.get_user(&credentials.email).await;
 
     if let Ok(_) = existing_user {
         return Err(AppError::UserAlreadyExists);
     }
-
 
     let hash_config = Config::default();
     let salt = std::env::var("SALT").expect("Missing SALT");
@@ -107,7 +107,7 @@ pub async fn register(
 
 pub async fn login(
     State(mut database): State<Store>,
-    Json( creds): Json<User>
+    Json(creds): Json<User>
 ) -> Result<Json<Value>, AppError> {
     if creds.email.is_empty() || creds.password.is_empty() {
         return Err(AppError::MissingCredentials)
@@ -154,10 +154,46 @@ pub async fn protected (
     ))
 }
 
+//g
+pub async fn get_users(
+    State(mut am_database): State<Store>,
+) -> Result<Json<Vec<User>>, AppError> {
+    let all_users = am_database.get_all_users().await?;
+    Ok(Json(all_users))
+}
+
+pub async fn update_user(
+    State(mut am_database): State<Store>,
+    Json(user): Json<UpdateUser>,
+) -> Result<Json<User>, AppError> {
+    let updated_user = am_database.update_user(user).await?;
+    Ok(Json(updated_user))
+}
+
+pub async fn delete_user(
+    State(mut am_database): State<Store>,
+    Json(creds): Json<UserCred>,
+) -> Result<(), AppError> {
+
+    let existing_user = am_database.get_user(&creds.email).await?;
+
+    let is_password_correct =
+        match argon2::verify_encoded(&*existing_user.password, creds.password.as_bytes()) {
+            Ok(result) => result,
+            Err(_) => {
+                return Err(AppError::InternalServerError);
+            }
+        };
+    if is_password_correct {
+        am_database.delete_user(creds).await?
+    }
+    Ok(())
+}
+/*
 pub async fn check_violation(
     State(mut am_database): State<Store>,
     Path(query): Path<i32>,
-) -> Result<Json<String>, AppError> {
+) -> Result<Json<User>, AppError> {
     let all_questions = am_database.get_question_by_id(QuestionId(query)).await?;
 
     let contents = fs::read_to_string("./src/badwords.txt")
@@ -171,18 +207,21 @@ pub async fn check_violation(
 
     let message = all_questions.content.clone().to_string();
 
-    let mut a = "no bad word".to_string();
+    let mut found = false;
     for words in message.split(" ") {
         if vec.contains(&words.to_string()) {
-            a = "bad word".to_string();
+            found = true;
         }
     }
 
-    let user = am_database.get_user_by_questionID(*all_questions.id).await?;
-    if a == "true".to_string(){
-        am_database.update_status(user).await?;
+    let mut user = am_database.get_user_by_questionID(UserId(all_questions.user_id)).await?;
+
+    if found == true{
+        user.status = "Ban".to_string();
+        let update_user = am_database.update_status(user).await?;
+        return Ok(Json(update_user))
     }
-
-    Ok(Json(a.to_string()))
-
+    Ok(Json(user))
 }
+
+*/

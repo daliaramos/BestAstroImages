@@ -8,7 +8,7 @@ use crate::answer::{Answer, AnswerId};
 use crate::error::AppError;
 use crate::question::{IntoQuestionId, Question, QuestionId, UpdateQuestion};
 //use crate::image::{Image};
-use crate::user::{User, UserSignup};
+use crate::user::{User, UserSignup, UpdateUser, UserCred};
 #[derive(Clone)]
 pub struct Store {
     pub conn_pool: PgPool,
@@ -93,6 +93,7 @@ impl Store {
                     title: row.title,
                     content: row.content,
                     tags: row.tags,
+                    //user_id: row.user_id
                 }
             })
             .collect();
@@ -120,6 +121,7 @@ impl Store {
             title: row.title,
             content: row.content,
             tags: row.tags,
+           // user_id: UserId(row.user_id.unwrap())
         };
 
         Ok(question)
@@ -177,6 +179,7 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
             content: row.content,
             id: QuestionId(row.id),
             tags: row.tags,
+            //user_id: UserId(row.user_id.unwrap())
         };
 
         Ok(question)
@@ -203,7 +206,7 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
     pub async fn get_user(&self, email: &str) -> Result<User, AppError> {
       let user = sqlx::query_as::<_, User>(
           r#"
-            SELECT email, password, user_role, status, question_id FROM users WHERE email = $1
+            SELECT email, password, user_role, status FROM users WHERE email = $1
           "#
       )
           .bind(email)
@@ -213,18 +216,6 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
         Ok(user)
     }
 
-    pub async fn get_user_by_questionID(&self, questionID: i32) -> Result<User, AppError> {
-        let user = sqlx::query_as::<_, User>(
-            r#"
-            SELECT email, password, user_role, status, question_id FROM users WHERE question_id = $1
-          "#
-        )
-            .bind(questionID)
-            .fetch_one(&self.conn_pool)
-            .await?;
-
-        Ok(user)
-    }
     pub async fn create_user(&self, user: UserSignup) -> Result<Json<Value>, AppError> {
         let result = sqlx::query("INSERT INTO users(email, password) values($1, $2)")
             .bind(&user.email)
@@ -238,10 +229,98 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
         }else{
             Ok(Json(serde_json::json!({"message": "User created successfully"})))
         }
-
-
     }
 
+    pub async fn get_all_users(&mut self) -> Result<Vec<User>, AppError> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT * FROM users
+            "#
+        )
+            .fetch_all(&self.conn_pool)
+            .await?;
+
+        let user: Vec<_> = rows
+            .into_iter()
+            .map(|row| {
+                User {
+                 //   id: row.id.into(), // Assuming you have a From<u32> for QuestionId
+                    email: row.email,
+                    password: row.password,
+                    user_role: row.user_role,
+                    status: row.status
+                }
+            })
+            .collect();
+
+        Ok(user)
+    }
+
+    pub async fn update_user(
+        &mut self,
+        new_user: UpdateUser,
+    ) -> Result<User, AppError> {
+        sqlx::query!(
+            r#"
+                UPDATE users
+                SET status = $1
+                WHERE email = $2
+            "#,
+            new_user.status,
+            new_user.email
+        )
+            .execute(&self.conn_pool)
+            .await?;
+
+        let row = sqlx::query!(
+        r#"
+            SELECT email, password, user_role, status FROM users WHERE email = $1
+        "#,
+        new_user.email,
+    )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let user = User {
+            email: row.email,
+            password: row.password,
+            user_role: row.user_role,
+            status: row.status,
+            //user_id: UserId(row.user_id.unwrap())
+        };
+
+        Ok(user)
+    }
+
+    pub async fn delete_user(
+        &mut self,
+        user_cred: UserCred,
+    ) -> Result<(), AppError> {
+
+        sqlx::query!(
+            r#"
+                DELETE FROM users WHERE email = $1
+            "#,
+           user_cred.email,
+        )
+            .execute(&self.conn_pool)
+            .await.unwrap();
+
+        Ok(())
+    }
+/*
+    pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
+        let user = sqlx::query_as::<_, User>(
+            r#"
+            SELECT id, email, password, user_role, status FROM users WHERE id = $1
+          "#
+        )
+            .bind(1)
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        Ok(user)
+    }
     pub async fn update_status(
         &mut self,
         new_status: User,
@@ -249,34 +328,48 @@ SELECT title, content, id, tags FROM questions WHERE id = $1
         sqlx::query!(
             r#"
                 UPDATE users
-                SET status = $1,
-                WHERE question_id = $2
+                SET status = $1
+                WHERE id = $2
             "#,
             new_status.status,
-            new_status.email,
+            *new_status.id,
         )
             .execute(&self.conn_pool)
             .await?;
 
         let row = sqlx::query!(
             r#"
-                SELECT email, status FROM users WHERE question_id = $1
+                SELECT id, email, password, user_role, status FROM users WHERE email = $1
             "#,
-            new_status.question_id,
-            new_status.status
+            new_status.email,
         )
             .fetch_one(&self.conn_pool)
             .await?;
 
         let status = User {
-            email: row.email,
-            status: row.staus,
+            id: UserId(row.id),
+          email:  row.email,
+            password: row.password,
+            user_role: row.user_role,
+            status: row.status
         };
 
         Ok(status)
     }
 
+    pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
+        let user = sqlx::query_as::<_, User>(
+            r#"
+            SELECT id, email, password, user_role, status FROM users WHERE id = $1
+          "#
+        )
+            .bind(1)
+            .fetch_one(&self.conn_pool)
+            .await?;
 
+        Ok(user)
+    }
+ */
 }
 
 

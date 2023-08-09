@@ -1,3 +1,4 @@
+use derive_more::Display;
 use axum::extract::FromRequestParts;
 use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
@@ -10,25 +11,41 @@ use crate::error::AppError;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::decode;
 use crate::question::QuestionId;
-
+/*
+#[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
+#[display(
+fmt = "id: {}, email: {}, password: {}, user_role: {}, status: {}",
+id,
+email,
+password,
+user_role,
+status,
+)]
+*/
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct User{
-    pub id: UserId,
+ //   pub id: UserId,
     pub email: String,
     pub password: String,
     pub user_role: String,
     pub status: String,
 }
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+/*
+#[derive(Clone, Copy, Debug, sqlx::Type, Display, derive_more::Deref, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub i32);
 
 impl From<i32> for UserId {
     fn from(value: i32) -> Self {
-        Self(value)
+        UserId(value)
     }
 }
 
-
+impl From<UserId> for i32 {
+    fn from(value: UserId) -> Self {
+        value.0
+    }
+}
+ */
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSignup{
     pub email: String,
@@ -41,9 +58,15 @@ pub struct LoggedInUser{
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateStatus {
+pub struct UpdateUser {
     pub email: String,
     pub status: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserCred {
+    pub email: String,
+    pub password: String
 }
 
 #[derive(Serialize, Deserialize, derive_more::Display)]

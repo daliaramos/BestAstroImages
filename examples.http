@@ -1,5 +1,5 @@
 ###
-GET http://localhost:3000/report/3
+GET http://localhost:3000/users
 Accept: application/json
 
 ###
@@ -8,15 +8,22 @@ Accept: application/json
 
 ###
 
-
-POST http://localhost:3000/login
+PUT http://localhost:3000/users
 Content-Type: application/json
 
 {
   "email": "email@email.com",
-  "password": "password",
-  "user_role": "user",
-  "status": "Good"
+  "status": "Banned"
+}
+
+###
+
+DELETE http://localhost:3000/users/delete
+Content-Type: application/json
+
+{
+  "email": "email@email.com",
+  "password": "password"
 }
 
 ###
@@ -26,24 +33,17 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MCwiZW1haWwiO
 
 
 ###
-POST http://localhost:3000/users
+PUT http://localhost:3000/question
 Content-Type: application/json
 
 {
-  "email": "email@email.com",
-  "password": "password",
-  "confirm_password": "password"
+  "id": 1,
+  "title": "here",
+  "content": "there",
+  "tags": ["tag2"]
 }
 
-###
-POST http://localhost:3000/question
-Content-Type: application/json
 
-{
-  "title":  "some title",
-  "content":  "fuck content",
-  "tags": ["tag1", "tag2"]
-}
 
 ###
 GET http://localhost:3000/questions
