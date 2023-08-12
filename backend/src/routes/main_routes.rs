@@ -33,7 +33,7 @@ pub async fn app(pool: PgPool) -> Router {
         .route("/login", post(handlers::login))
 
 
-        .route("/images", get(handlers::create_image))
+        .route("/images", get(handlers::get_image))
         //.route("/images", )
         .route("/protected", get(handlers::protected))
      //   .route("/v1/apod?api_key=DEMO_KEY&date=2014-10-01&concept_tags=True", "")
