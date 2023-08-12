@@ -1,19 +1,20 @@
 use std::sync::{Arc, Mutex, RwLock};
 use serde_json::Value;
 use sqlx::PgPool;
+use reqwest::Client;
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
-use axum::Json;
-use crate::answer::{Answer, AnswerId};
+use axum::{Json, extract};
+use crate::models::comment::{Comment, CommentId};
 use crate::error::AppError;
-use crate::question::{IntoQuestionId, Question, QuestionId, UpdateQuestion};
-use crate::image::{Image, CreateImage, ImageId};
-use crate::user::{User, UserSignup, UpdateUser, UserCred};
+use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById, IntoPostId};
+use crate::models::image::{Image, CreateImage, ImageId, ApiRes, QueryParams};
+use crate::models::user::{User, UserSignup, UpdateUser, UserCred};
 #[derive(Clone)]
 pub struct Store {
     pub conn_pool: PgPool,
-    pub questions: Arc<Mutex<Vec<Question>>>,
-    pub answers: Arc<RwLock<Vec<Answer>>>,
+    pub posts: Arc<Mutex<Vec<Post>>>,
+    pub comments: Arc<RwLock<Vec<Comment>>>,
   //  pub images: Arc<Mutex<Vec<Image>>>
 
 }
@@ -31,8 +32,8 @@ impl Store {
     pub fn with_pool(pool: PgPool) -> Self {
         Self {
             conn_pool: pool,
-            questions: Default::default(),
-            answers: Default::default(),
+            posts: Default::default(),
+            comments: Default::default(),
 
         }
     }
@@ -49,46 +50,46 @@ impl Store {
         Ok(())
     }
 
-    pub async fn add_answer(
+    pub async fn add_comments(
         &mut self,
         content: String,
-        question_id: i32,
-    ) -> Result<Answer, AppError> {
+        post_id: i32,
+    ) -> Result<Comment, AppError> {
         let res = sqlx::query!(
             r#"
-    INSERT INTO answers (content, question_id)
+    INSERT INTO comments (content, post_id)
     VALUES ($1, $2)
     RETURNING *
     "#,
             content,
-            question_id,
+            post_id,
         )
             .fetch_one(&self.conn_pool)
             .await?;
 
-        let answer = Answer {
-            id: AnswerId(res.id),
+        let comment = Comment {
+            id: CommentId(res.id),
             content: res.content,
-            question_id: QuestionId(res.question_id.unwrap()),
+            post_id: PostId(res.post_id.unwrap()),
         };
 
-        Ok(answer)
+        Ok(comment)
     }
 
 
-    pub async fn get_all_questions(&mut self) -> Result<Vec<Question>, AppError> {
+    pub async fn get_all_posts(&mut self) -> Result<Vec<Post>, AppError> {
         let rows = sqlx::query!(
             r#"
-            SELECT * FROM questions
+            SELECT * FROM posts
             "#
         )
             .fetch_all(&self.conn_pool)
             .await?;
 
-        let questions: Vec<_> = rows
+        let posts: Vec<_> = rows
             .into_iter()
             .map(|row| {
-                Question {
+                Post {
                     id: row.id.into(), // Assuming you have a From<u32> for QuestionId
                     title: row.title,
                     content: row.content,
@@ -97,41 +98,41 @@ impl Store {
             })
             .collect();
 
-        Ok(questions)
+        Ok(posts)
     }
 
-    pub async fn get_question_by_id<T: IntoQuestionId>(
+    pub async fn get_post_by_id<T: IntoPostId>(
         &mut self,
         id: T,
-    ) -> Result<Question, AppError> {
+    ) -> Result<Post, AppError> {
         let id = id.into_question_id();
 
         let row = sqlx::query!(
             r#"
-    SELECT * FROM questions WHERE id = $1
+    SELECT * FROM posts WHERE id = $1
     "#,
             id.0,
         )
             .fetch_one(&self.conn_pool)
             .await?;
 
-        let question = Question {
+        let post = Post {
             id: row.id.into(), // Assuming you have a From<u32> for QuestionId
             title: row.title,
             content: row.content,
            // user_id: UserId(row.user_id.unwrap())
         };
 
-        Ok(question)
+        Ok(post)
     }
 
-    pub async fn add_question(
+    pub async fn add_post(
         &mut self,
         title: String,
         content: String,
     ) -> Result<(), AppError> {
         sqlx::query!(
-            r#"INSERT INTO "questions"(title, content)
+            r#"INSERT INTO "posts"(title, content)
            VALUES ($1, $2)
         "#,
             title,
@@ -143,53 +144,53 @@ impl Store {
         Ok(())
     }
 
-    pub async fn update_question(
+    pub async fn update_post(
         &mut self,
-        new_question: UpdateQuestion,
-    ) -> Result<Question, AppError> {
+        new_post: UpdatePost,
+    ) -> Result<Post, AppError> {
         sqlx::query!(
             r#"
-    UPDATE questions
+    UPDATE posts
     SET title = $1, content = $2
     WHERE id = $3
     "#,
-            new_question.title,
-            new_question.content,
-            new_question.id.0,
+            new_post.title,
+            new_post.content,
+            new_post.id.0,
         )
             .execute(&self.conn_pool)
             .await?;
 
         let row = sqlx::query!(
         r#"
-            SELECT title, content, id FROM questions WHERE id = $1
+            SELECT title, content, id FROM posts WHERE id = $1
         "#,
-        new_question.id.0,
+        new_post.id.0,
     )
             .fetch_one(&self.conn_pool)
             .await?;
 
-        let question = Question {
+        let post = Post {
             title: row.title,
             content: row.content,
-            id: QuestionId(row.id),
+            id: PostId(row.id),
             //user_id: UserId(row.user_id.unwrap())
         };
 
-        Ok(question)
+        Ok(post)
     }
 
-    pub async fn delete_question(
+    pub async fn delete_post(
         &mut self,
-        question_id: i32,
+        post_id: i32,
     ) -> Result<(), AppError> {
-        let question_id = question_id.into_question_id();
-        println!("DELETE - Question id is {}", &question_id);
+        let post_id = post_id.into_question_id();
+        println!("DELETE - Question id is {}", &post_id);
         sqlx::query!(
             r#"
-                DELETE FROM questions WHERE id = $1
+                DELETE FROM posts WHERE id = $1
             "#,
-            question_id.0,
+            post_id.0,
         )
             .execute(&self.conn_pool)
             .await.unwrap();
@@ -305,27 +306,52 @@ impl Store {
 
     pub async fn add_image(
         &mut self,
-        img: CreateImage,
+        payload: CreateImage,
     ) -> Result<Image, AppError> {
+
+        //if not in the db then we want to call nasa api
+
         let res = sqlx::query!(
             r#"
-                INSERT INTO images (id, image_url)
-                VALUES ($1, $2)
+                INSERT INTO images (copyright, explanation,hdurl, media_type, service_version, title, url)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *
             "#,
-            img.id,
-            img.image_url,
+            payload.copyright,
+            payload.explanation,
+            payload.hdurl,
+            payload.media_type,
+            payload.service_version,
+            payload.title,
+            payload.url
         )
             .fetch_one(&self.conn_pool)
             .await?;
 
         let image = Image {
-            id: ImageId(res.id),
-            image_url: res.image_url,
+            copyright: res.copyright,
+            explanation: res.explanation,
+            hdurl: res.hdurl,
+            media_type: res.media_type,
+            service_version: res.service_version,
+            title: res.title,
+            url: res.url
         };
 
         Ok(image)
     }
+
+
+    pub async fn get_image(
+        &mut self,
+    ) -> Result<ApiRes, reqwest::Error> {
+        let res = ApiRes::get().await?;
+        Ok(res)
+    }
+
+
+
+
 /*
     pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
         let user = sqlx::query_as::<_, User>(

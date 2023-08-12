@@ -1,2 +1,2 @@
 -- Add down migration script here
-DROP TABLE questions;
+DROP TABLE comments;

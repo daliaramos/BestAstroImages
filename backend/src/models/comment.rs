@@ -1,25 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use crate::question::QuestionId;
+use crate::models::post::PostId;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Answer {
-    pub id: AnswerId,
+pub struct Comment {
+    pub id: CommentId,
     pub content: String,
-    pub question_id: QuestionId,
+    pub post_id: PostId,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AnswerId(pub i32);
+pub struct CommentId(pub i32);
 
-impl From<i32> for AnswerId {
+impl From<i32> for CommentId {
     fn from(value: i32) -> Self {
         Self(value)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateAnswer {
+pub struct CreateComment {
     pub content: String,
-    pub question_id: i32,
+    pub post_id: i32,
 }

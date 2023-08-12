@@ -3,20 +3,19 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use dotenvy::dotenv;
 use tracing::info;
+use crate::routes::main_routes;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::db::new_pool;
 
-pub mod answer;
+
 pub mod db;
 pub mod error;
 pub mod handlers;
 pub mod layers;
-pub mod question;
 pub mod routes;
-pub mod user;
-pub mod image;
+pub mod models;
 
 pub async fn run_backend() {
     dotenv().ok();
@@ -24,7 +23,7 @@ pub async fn run_backend() {
 
     let addr = get_host_from_env();
 
-    let app = routes::app(new_pool().await).await;
+    let app = main_routes::app(new_pool().await).await;
 
     info!("Listening...");
 

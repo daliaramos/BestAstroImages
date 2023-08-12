@@ -1,15 +1,17 @@
 use argon2::Config;
 use axum::extract::{Path,Query, State};
-use axum::Json;
+use axum::{Json, extract};
 use crate::db::Store;
+use reqwest::Client;
 use crate::error::{AppError};
-use crate::question::{Question, QuestionId, UpdateQuestion, CreateQuestion, GetQuestionById};
-use crate::answer::{Answer, CreateAnswer};
-use crate::image::{Image, CreateImage};
+use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById};
+use crate::models::comment::{Comment, CreateComment};
+use crate::models::image::{Image, CreateImage, QueryParams, ApiRes};
 use jsonwebtoken::Header;
 use crate::get_timestamp_after_8_hours;
-use crate::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred};
+use crate::models::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred};
 use serde_json::{json, Value};
+
 use std::fs;
 
 
@@ -18,54 +20,52 @@ pub async fn root() -> String {
 }
 
 //CRUD - create, read, update, delete
-pub async fn get_questions(
+pub async fn get_posts(
     State(mut am_database): State<Store>,
-) -> Result<Json<Vec<Question>>, AppError> {
-    let all_questions = am_database.get_all_questions().await?;
-    Ok(Json(all_questions))
+) -> Result<Json<Vec<Post>>, AppError> {
+    let all_posts = am_database.get_all_posts().await?;
+    Ok(Json(all_posts))
 }
 
 
-pub async fn get_question_by_id(
+pub async fn get_post_by_id(
     State(mut am_database): State<Store>,
     Path(query): Path<i32>,
-) -> Result<Json<Question>, AppError> {
-    let question = am_database.get_question_by_id(QuestionId(query)).await?;
-    Ok(Json(question))
+) -> Result<Json<Post>, AppError> {
+    let post = am_database.get_post_by_id(PostId(query)).await?;
+    Ok(Json(post))
 }
 
-pub async fn create_question(
+pub async fn create_post(
     State(mut am_database): State<Store>,
-    Json(question): Json<CreateQuestion>
+    Json(post): Json<CreatePost>
 ) -> Result<Json<()>, AppError> {
-    let new_question = am_database.add_question(question.title, question.content).await?;
-    Ok(Json(new_question)) //ORM - object relational mapper
+    let new_post= am_database.add_post(post.title, post.content).await?;
+    Ok(Json(new_post)) //ORM - object relational mapper
 }
 
-pub async fn update_question(
+pub async fn update_post(
     State(mut am_database): State<Store>,
-    Json(question): Json<UpdateQuestion>,
-) -> Result<Json<Question>, AppError> {
-    let updated_question = am_database.update_question(question).await?;
-    Ok(Json(updated_question))
+    Json(post): Json<UpdatePost>,
+) -> Result<Json<Post>, AppError> {
+    let updated_post = am_database.update_post(post).await?;
+    Ok(Json(updated_post))
 }
 
 
-pub async fn delete_question(
+pub async fn delete_post(
     State(mut am_database): State<Store>,
-    Query(query): Query<GetQuestionById>
+    Query(query): Query<GetPostById>
 ) -> Result<(), AppError> {
-    am_database.delete_question(query.question_id).await?;
+    am_database.delete_post(query.post_id).await?;
     Ok(())
 }
-pub async fn create_answer(
+pub async fn create_comment(
     State(mut am_database): State<Store>,
-    Json(answer): Json<CreateAnswer>,
-) -> Result<Json<Answer>, AppError> {
-    dbg!("GOT CREATE ANSWER:");
-    dbg!(&answer);
-    let new_answer = am_database.add_answer(answer.content, answer.question_id).await?;
-    Ok(Json(new_answer))
+    Json(comment): Json<CreateComment>,
+) -> Result<Json<Comment>, AppError> {
+    let new_comment = am_database.add_comments(comment.content, comment.post_id).await?;
+    Ok(Json(new_comment))
 }
 
 
@@ -190,16 +190,31 @@ pub async fn delete_user(
     }
     Ok(())
 }
-
 pub async fn create_image(
     State(mut am_database): State<Store>,
-    Json(img): Json<CreateImage>,
+    Json(payload): Json<CreateImage>
 ) -> Result<Json<Image>, AppError> {
-    let new_image = am_database.add_image(img).await?;
-    Ok(Json(new_image))
+    let new_post= am_database.add_image(payload).await?;
+    Ok(Json(new_post)) //ORM - object relational mapper
 }
 
 
+pub async fn get_image(
+    State(mut am_database): State<Store>,
+) -> Result<Json<ApiRes>, reqwest::Error> {
+    let new_image = am_database.get_image().await?;
+    Ok(Json(new_image))
+}
+
+/*
+pub async fn create_image(
+    State(mut am_database): State<Store>,
+    extract::Json(payload): extract::Json<CreateImage>) {
+    // payload is a `CreateUser`
+}
+
+
+ */
 /*
 pub async fn check_violation(
     State(mut am_database): State<Store>,

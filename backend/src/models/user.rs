@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use crate::error::AppError;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::decode;
-use crate::question::QuestionId;
+use crate::models::post::PostId;
 /*
 #[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
 #[display(

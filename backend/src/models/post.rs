@@ -9,8 +9,8 @@ id,
 title,
 content,
 )]
-pub struct Question {
-    pub id: QuestionId,
+pub struct Post {
+    pub id: PostId,
     pub title: String,
     pub content: String,
 
@@ -18,10 +18,10 @@ pub struct Question {
 }
 
 
-impl Question {
+impl Post {
     #[allow(dead_code)]
-    pub fn new(id: QuestionId, title: String, content: String) -> Self {
-        Question {
+    pub fn new(id: PostId, title: String, content: String) -> Self {
+        Post {
             id,
             title,
             content,
@@ -30,40 +30,40 @@ impl Question {
 }
 
 #[derive(Clone, Copy, Debug, sqlx::Type, Display, derive_more::Deref, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct QuestionId(pub i32);
+pub struct PostId(pub i32);
 
-impl From<i32> for QuestionId {
+impl From<i32> for PostId {
     fn from(value: i32) -> Self {
-        QuestionId(value)
+        PostId(value)
     }
 }
 
-impl From<QuestionId> for i32 {
-    fn from(value: QuestionId) -> Self {
+impl From<PostId> for i32 {
+    fn from(value: PostId) -> Self {
         value.0
     }
 }
 
 
-pub trait IntoQuestionId {
-    fn into_question_id(self) -> QuestionId;
+pub trait IntoPostId {
+    fn into_question_id(self) -> PostId;
 }
 
-impl IntoQuestionId for i32 {
-    fn into_question_id(self) -> QuestionId {
-        QuestionId::from(self)
+impl IntoPostId for i32 {
+    fn into_question_id(self) -> PostId {
+        PostId::from(self)
     }
 }
 
-impl IntoQuestionId for QuestionId {
-    fn into_question_id(self) -> QuestionId {
+impl IntoPostId for PostId {
+    fn into_question_id(self) -> PostId {
         self
     }
 }
 
 // Clients use this to create new requests
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateQuestion {
+pub struct CreatePost {
     pub title: String,
     pub content: String,
     pub tags: Option<Vec<String>>,
@@ -71,14 +71,14 @@ pub struct CreateQuestion {
 }
 
 #[derive(Deserialize)]
-pub struct GetQuestionById {
-    pub question_id: i32,
+pub struct GetPostById {
+    pub post_id: i32,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateQuestion {
-    pub id: QuestionId,
+pub struct UpdatePost {
+    pub id: PostId,
     pub title: String,
     pub content: String,
     pub tags: Option<Vec<String>>,
