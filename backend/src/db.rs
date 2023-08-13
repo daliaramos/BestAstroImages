@@ -15,7 +15,7 @@ pub struct Store {
     pub conn_pool: PgPool,
     pub posts: Arc<Mutex<Vec<Post>>>,
     pub comments: Arc<RwLock<Vec<Comment>>>,
-  //  pub images: Arc<Mutex<Vec<Image>>>
+    pub images: Arc<Mutex<Vec<Image>>>
 
 }
 
@@ -34,6 +34,7 @@ impl Store {
             conn_pool: pool,
             posts: Default::default(),
             comments: Default::default(),
+            images: Default::default(),
 
         }
     }
@@ -344,9 +345,10 @@ impl Store {
 
     pub async fn get_image(
         &mut self,
-    ) -> Result<ApiRes, reqwest::Error> {
+    ) -> Result<ApiRes, AppError> {
         let res = ApiRes::get().await?;
-        Ok(res)
+
+        Ok(image)
     }
 
 

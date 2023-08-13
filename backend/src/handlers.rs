@@ -201,7 +201,7 @@ pub async fn create_image(
 
 pub async fn get_image(
     State(mut am_database): State<Store>,
-) -> Result<Json<ApiRes>, reqwest::Error> {
+) -> Result<Json<ApiRes>, AppError> {
     let new_image = am_database.get_image().await?;
     Ok(Json(new_image))
 }

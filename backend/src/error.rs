@@ -15,6 +15,7 @@ pub enum AppError {
     UserAlreadyExists,
     InvalidToken,
     InternalServerError,
+    ImageError,
     #[allow(dead_code)]
     Any(anyhow::Error)
 }
@@ -38,6 +39,7 @@ impl IntoResponse for AppError {
             AppError::UserAlreadyExists => (StatusCode::UNAUTHORIZED, "There is already an account with that email address".to_string()),
             AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token".to_string()),
             AppError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Something horrible happened".to_string()),
+            AppError::ImageError => (reqwest::Error),
             AppError::Any(err) => {
                 let message = format!("Internal server error! {}", err);
                 (StatusCode::INTERNAL_SERVER_ERROR, message)

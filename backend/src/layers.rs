@@ -2,7 +2,9 @@ use tower_http::classify::{ServerErrorsAsFailures, SharedClassifier};
 use tower_http::cors::{Any, CorsLayer};
 use http::Method;
 use tower_http::trace::TraceLayer;
-
+use axum::{
+    routing::get
+};
 
 pub fn get_layers() -> (CorsLayer, TraceLayer<SharedClassifier<ServerErrorsAsFailures>>){
     let cors_layer = CorsLayer::new()
