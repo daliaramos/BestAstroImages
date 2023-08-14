@@ -1,6 +1,8 @@
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use crate::error::AppError;
+use serde_derive::{Deserialize, Serialize};
 use dotenvy::dotenv;
 use tracing::info;
 use crate::routes::main_routes;
@@ -16,6 +18,8 @@ pub mod handlers;
 pub mod layers;
 pub mod routes;
 pub mod models;
+pub mod template;
+
 
 pub async fn run_backend() {
     dotenv().ok();
@@ -66,4 +70,56 @@ pub fn get_timestamp_after_8_hours() -> u64 {
     let eight_hours = since_epoch + Duration::from_secs(28800);
     eight_hours.as_secs()
 
+}
+
+#[macro_export]
+macro_rules! make_db_id {
+    ($name:ident) => {
+        use derive_more::Display;
+
+        paste::paste! {
+            #[derive(
+                Clone,
+                Copy,
+                Debug,
+                sqlx::Type,
+                Display,
+                derive_more::Deref,
+                PartialEq,
+                Eq,
+                Hash,
+                serde_derive::Serialize,
+                serde_derive::Deserialize,
+            )]
+            pub struct $name(pub i32);
+
+            impl From<i32> for $name {
+                fn from(value: i32) -> Self {
+                    $name(value)
+                }
+            }
+
+            impl From<$name> for i32 {
+                fn from(value: $name) -> Self {
+                    value.0
+                }
+            }
+
+            pub trait [<Into $name>] {
+                fn into_id(self) -> $name;
+            }
+
+            impl [<Into $name>] for i32 {
+                fn into_id(self) -> $name {
+                    $name::from(self)
+                }
+            }
+
+            impl [<Into $name>] for $name {
+                fn into_id(self) -> $name {
+                    self
+                }
+            }
+        }
+    };
 }

@@ -1,17 +1,13 @@
-use derive_more::Display;
 use serde_derive::{Deserialize, Serialize};
-use axum::{
-    extract,
-    routing::post,
-    Router,
-};
-use reqwest::Client;
-
+use crate::make_db_id;
+use axum::Json;
+use axum::response::{IntoResponse, Response};
+/*
 // This uses the `derive_more` crate to reduce the Display boilerplate (see below)
 #[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
 #[display(
-fmt = "copyright: {},explanation: {}, hdurl: {}, media_type: {}, service_version: {}, title= {}, url={}",
-
+fmt = "id: {}, copyright: {},explanation: {}, hdurl: {}, media_type: {}, service_version: {}, title= {}, url={}",
+id,
 copyright,
 explanation,
 hdurl,
@@ -20,7 +16,12 @@ service_version,
 title,
 url
 )]
+
+ */
+
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Image {
+    pub id: Option<ImageId>,
     pub copyright: String,
    // pub date: String,
     pub explanation: String,
@@ -31,26 +32,14 @@ pub struct Image {
     pub url: String
 }
 
-pub struct QueryParams{
-    pub api_key: String
-}
 
-impl Image {
-    #[allow(dead_code)]
-    pub fn new(image_url: String, copyright: String, explanation: String, hdurl: String, media_type: String, service_version: String, title: String, url: String) -> Self {
-        Image {
-            copyright,
-          //  date,
-            explanation,
-            hdurl,
-            media_type,
-            service_version,
-            title,
-            url
-        }
+make_db_id!(ImageId);
+
+impl IntoResponse for Image{
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiRes {
     //#[serde(flatten)]
@@ -120,14 +109,11 @@ impl From<PostId> for i32 {
 
 
  */
-#[derive(Clone, Copy, Debug, sqlx::Type, Display, derive_more::Deref, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ImageId(pub i32);
 
 
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateImage {
-    pub image_url: String,
     pub copyright: String,
   //  pub date: String,
     pub explanation: String,
@@ -136,4 +122,21 @@ pub struct CreateImage {
     pub service_version: String,
     pub title: String,
     pub url: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateImage {
+    pub copyright: String,
+    //  pub date: String,
+    pub explanation: String,
+    pub hdurl: String,
+    pub media_type: String,
+    pub service_version: String,
+    pub title: String,
+    pub url: String
+}
+
+#[derive(Deserialize)]
+pub struct GetImageById {
+    pub image_id: i32,
 }

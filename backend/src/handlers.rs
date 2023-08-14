@@ -1,22 +1,59 @@
 use argon2::Config;
-use axum::extract::{Path,Query, State};
-use axum::{Json, extract};
+use axum::{Form, Json};
+use axum::extract::{Path, Query, State};
+use axum::response::{Html, Response};
 use crate::db::Store;
-use reqwest::Client;
 use crate::error::{AppError};
-use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById};
-use crate::models::comment::{Comment, CreateComment};
-use crate::models::image::{Image, CreateImage, QueryParams, ApiRes};
+use http::header::{LOCATION, SET_COOKIE};
+use http::{HeaderValue, StatusCode};
+use hyper::Body;
 use jsonwebtoken::Header;
+
+use tracing::error;
 use crate::get_timestamp_after_8_hours;
-use crate::models::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred};
+
 use serde_json::{json, Value};
+use tera::Context;
 
 use std::fs;
 
+use crate::models::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred, OptionalClaims};
+use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById};
+use crate::models::comment::{Comment, CreateComment};
+use crate::models::image::{Image, CreateImage, ApiRes, UpdateImage, GetImageById};
+use crate::template::TEMPLATES;
 
-pub async fn root() -> String {
-    "Hello World!".to_string()
+#[allow(dead_code)]
+pub async fn root(
+    State(mut am_database): State<Store>,
+    OptionalClaims(claims): OptionalClaims,
+) -> Result<Html<String>, AppError> {
+    let mut context = Context::new();
+    context.insert("name", "Dalia");
+
+    let template_name = if let Some(claims_data) = claims {
+        error!("Setting claims and is_logged_in is TRUE now");
+        context.insert("claims", &claims_data);
+        context.insert("is_logged_in", &true);
+        // Get all the page data
+    //    let page_packages = am_database.get_all_question_pages().await?;
+     //   context.insert("page_packages", &page_packages);
+
+       "images.html" // Use the new template when logged in
+    } else {
+        // Handle the case where the user isn't logged in
+        error!("is_logged_in is FALSE now");
+        context.insert("is_logged_in", &false);
+        "index.html" // Use the original template when not logged in
+    };
+
+    let rendered = TEMPLATES
+        .render(template_name, &context)
+        .unwrap_or_else(|err| {
+            error!("Template rendering error: {}", err);
+            panic!()
+        });
+    Ok(Html(rendered))
 }
 
 //CRUD - create, read, update, delete
@@ -43,7 +80,7 @@ pub async fn create_post(
     let new_post= am_database.add_post(post.title, post.content).await?;
     Ok(Json(new_post)) //ORM - object relational mapper
 }
-
+/*
 pub async fn update_post(
     State(mut am_database): State<Store>,
     Json(post): Json<UpdatePost>,
@@ -52,6 +89,8 @@ pub async fn update_post(
     Ok(Json(updated_post))
 }
 
+
+ */
 
 pub async fn delete_post(
     State(mut am_database): State<Store>,
@@ -108,8 +147,8 @@ pub async fn register(
 
 pub async fn login(
     State(mut database): State<Store>,
-    Json(creds): Json<User>
-) -> Result<Json<Value>, AppError> {
+    Form(creds): Form<UserCred>
+) -> Result<Response<Body>, AppError> {
     if creds.email.is_empty() || creds.password.is_empty() {
         return Err(AppError::MissingCredentials)
     }
@@ -133,6 +172,7 @@ pub async fn login(
     if existing_user.status == "Ban".to_string() {
         return Err(AppError::AccountBanned);
     }
+
     //create jwt to return
     let claims = Claims {
         id: 0,
@@ -142,7 +182,22 @@ pub async fn login(
 
     let token = jsonwebtoken::encode(&Header::default(), &claims, &KEYS.encoding)
         .map_err(|_| AppError::MissingCredentials)?;
-    Ok(Json(json!({ "access_token" : token, "type": "Bearer"})))
+    let cookie = cookie::Cookie::build("jwt", token).http_only(true).finish();
+
+    let mut response = Response::builder()
+        .status(StatusCode::FOUND)
+        .body(Body::empty())
+        .unwrap();
+
+    response
+        .headers_mut()
+        .insert(LOCATION, HeaderValue::from_static("/"));
+    response.headers_mut().insert(
+        SET_COOKIE,
+        HeaderValue::from_str(&cookie.to_string()).unwrap(),
+    );
+
+    Ok(response)
 
 }
 
@@ -190,22 +245,33 @@ pub async fn delete_user(
     }
     Ok(())
 }
+
+
 pub async fn create_image(
     State(mut am_database): State<Store>,
     Json(payload): Json<CreateImage>
 ) -> Result<Json<Image>, AppError> {
-    let new_post= am_database.add_image(payload).await?;
-    Ok(Json(new_post)) //ORM - object relational mapper
+    let new_image= am_database.add_image(payload).await?;
+    Ok(Json(new_image)) //ORM - object relational mapper
 }
 
-
+pub async fn delete_image(
+    State(mut am_database): State<Store>,
+    Query(query): Query<GetImageById>
+) -> Result<(), AppError> {
+    am_database.delete_image(query.image_id).await?;
+    Ok(())
+}
+/*
 pub async fn get_image(
     State(mut am_database): State<Store>,
-) -> Result<Json<ApiRes>, AppError> {
+) -> Result<Json<ApiRes>, reqwest::Error> {
     let new_image = am_database.get_image().await?;
     Ok(Json(new_image))
 }
 
+
+ */
 /*
 pub async fn create_image(
     State(mut am_database): State<Store>,

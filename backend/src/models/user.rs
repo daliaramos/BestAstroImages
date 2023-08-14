@@ -6,6 +6,8 @@ use axum::{async_trait, RequestPartsExt, TypedHeader};
 use http::request::Parts;
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Validation};
 use once_cell::sync::Lazy;
+use cookie::Cookie;
+use std::convert::Infallible;
 
 use crate::error::AppError;
 use serde_derive::{Deserialize, Serialize};
@@ -86,15 +88,58 @@ impl<S> FromRequestParts<S> for Claims
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         //extract a token claims from our Authorization header
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .map_err(|_| AppError::InvalidToken)?;
+        let jwt_token = parts
+            .headers
+            .get("cookie")
+            .and_then(|value| Cookie::parse(value.to_str().unwrap_or_default()).ok())
+            .and_then(|cookie| {
+                if cookie.name() == "jwt" {
+                    Some(cookie.value().to_string())
+                } else {
+                    None
+                }
+            })
+            .ok_or(AppError::InvalidToken)?;
 
-        let token_data = decode::<Claims>(bearer.token(), &KEYS.decoding, &Validation::default())
+        let token_data = decode::<Claims>(&jwt_token, &KEYS.decoding, &Validation::default())
             .map_err(|_| AppError::InvalidToken)?;
 
         Ok(token_data.claims)
+    }
+}
+
+
+pub struct OptionalClaims(pub Option<Claims>);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for OptionalClaims
+    where
+        S: Send + Sync,
+{
+    type Rejection = Infallible; // Use Infallible since we're not rejecting the request
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Try extracting the JWT token from the "jwt" cookie
+        let jwt_token = parts
+            .headers
+            .get("cookie")
+            .and_then(|value| Cookie::parse(value.to_str().unwrap_or_default()).ok())
+            .and_then(|cookie| {
+                if cookie.name() == "jwt" {
+                    Some(cookie.value().to_string())
+                } else {
+                    None
+                }
+            });
+
+        // If we have a JWT token, try to decode it
+        if let Some(jwt) = jwt_token {
+            if let Ok(token_data) = decode::<Claims>(&jwt, &KEYS.decoding, &Validation::default()) {
+                return Ok(OptionalClaims(Some(token_data.claims)));
+            }
+        }
+
+        Ok(OptionalClaims(None))
     }
 }
 

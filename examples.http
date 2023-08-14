@@ -1,10 +1,36 @@
-###
-GET http://localhost:3000/images
-Accept: application/json
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+  "email": "email@email.com",
+  "password" : "password",
+  "user_role": "user",
+  "status": "Good"
+}
 
 ###
-GET http://localhost:3000/users/email=email
-Accept: application/json
+
+
+
+
+POST http://localhost:3000/images
+Content-Type: application/json
+
+{
+  "copyright": "as",
+  "explanation": "asd",
+  "hdurl": "adffsv",
+  "media_type": "adfdav",
+  "service_version": "adfdva",
+  "title": "advfcvf",
+  "url": "adfdav"
+}
+
+###
+DELETE http://localhost:3000/images?image_id=1
+Content-Type: application/json
+
+
 
 ###
 

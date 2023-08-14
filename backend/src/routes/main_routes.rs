@@ -20,20 +20,21 @@ pub async fn app(pool: PgPool) -> Router {
     Router::new()
         // The router matches these FROM TOP TO BOTTOM explicitly!
         .route("/", get(root))
-        .route("/questions", get(handlers::get_posts))
-        .route("/question/:post_id", get(handlers::get_post_by_id))
-        .route("/question", post(handlers::create_post))
-        .route("/question", put(handlers::update_post))
-        .route("/question", delete(handlers::delete_post))
+        .route("/post", get(handlers::get_posts))
+        .route("/post/:post_id", get(handlers::get_post_by_id))
+        .route("/post", post(handlers::create_post))
+      //  .route("/question", put(handlers::update_post))
+        .route("/post", delete(handlers::delete_post))
 
-        .route("/answer", post(handlers::create_comment))
+        .route("/comment", post(handlers::create_comment))
         .route("/users", post(handlers::register))
         .route("/users", put(handlers::update_user))
         .route("/users/delete", delete(handlers::delete_user))
         .route("/login", post(handlers::login))
 
 
-        .route("/images", get(handlers::get_image))
+        .route("/images", post(handlers::create_image))
+        .route("/images/:image_id", delete(handlers::delete_image))
         //.route("/images", )
         .route("/protected", get(handlers::protected))
      //   .route("/v1/apod?api_key=DEMO_KEY&date=2014-10-01&concept_tags=True", "")

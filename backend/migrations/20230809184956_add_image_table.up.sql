@@ -8,6 +8,5 @@ CREATE TABLE IF NOT EXISTS images
     media_type           TEXT      NOT NULL,
     service_version      TEXT      NOT NULL,
     title                 TEXT      NOT NULL,
-    url                 TEXT      NOT NULL,
-    image_url              TEXT      NOT NULL
+    url                 TEXT      NOT NULL
 );

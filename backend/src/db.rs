@@ -1,14 +1,14 @@
 use std::sync::{Arc, Mutex, RwLock};
 use serde_json::Value;
-use sqlx::PgPool;
-use reqwest::Client;
+use sqlx::{PgPool, Row};
+
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
-use axum::{Json, extract};
+use axum::{Json};
 use crate::models::comment::{Comment, CommentId};
 use crate::error::AppError;
 use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById, IntoPostId};
-use crate::models::image::{Image, CreateImage, ImageId, ApiRes, QueryParams};
+use crate::models::image::{IntoImageId, Image, CreateImage, ApiRes, ImageId};
 use crate::models::user::{User, UserSignup, UpdateUser, UserCred};
 #[derive(Clone)]
 pub struct Store {
@@ -58,10 +58,10 @@ impl Store {
     ) -> Result<Comment, AppError> {
         let res = sqlx::query!(
             r#"
-    INSERT INTO comments (content, post_id)
-    VALUES ($1, $2)
-    RETURNING *
-    "#,
+                INSERT INTO comments (content, post_id)
+                VALUES ($1, $2)
+                RETURNING *
+            "#,
             content,
             post_id,
         )
@@ -134,8 +134,8 @@ impl Store {
     ) -> Result<(), AppError> {
         sqlx::query!(
             r#"INSERT INTO "posts"(title, content)
-           VALUES ($1, $2)
-        "#,
+                VALUES ($1, $2)
+            "#,
             title,
             content,
         )
@@ -145,41 +145,6 @@ impl Store {
         Ok(())
     }
 
-    pub async fn update_post(
-        &mut self,
-        new_post: UpdatePost,
-    ) -> Result<Post, AppError> {
-        sqlx::query!(
-            r#"
-    UPDATE posts
-    SET title = $1, content = $2
-    WHERE id = $3
-    "#,
-            new_post.title,
-            new_post.content,
-            new_post.id.0,
-        )
-            .execute(&self.conn_pool)
-            .await?;
-
-        let row = sqlx::query!(
-        r#"
-            SELECT title, content, id FROM posts WHERE id = $1
-        "#,
-        new_post.id.0,
-    )
-            .fetch_one(&self.conn_pool)
-            .await?;
-
-        let post = Post {
-            title: row.title,
-            content: row.content,
-            id: PostId(row.id),
-            //user_id: UserId(row.user_id.unwrap())
-        };
-
-        Ok(post)
-    }
 
     pub async fn delete_post(
         &mut self,
@@ -311,13 +276,13 @@ impl Store {
     ) -> Result<Image, AppError> {
 
         //if not in the db then we want to call nasa api
-
-        let res = sqlx::query!(
+        let res = sqlx::query(
             r#"
                 INSERT INTO images (copyright, explanation,hdurl, media_type, service_version, title, url)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *
-            "#,
+            "#
+            /*
             payload.copyright,
             payload.explanation,
             payload.hdurl,
@@ -325,97 +290,132 @@ impl Store {
             payload.service_version,
             payload.title,
             payload.url
+
+             */
         )
+            .bind( payload.copyright)
+            .bind( payload.explanation)
+            .bind(payload.hdurl)
+            .bind(payload.media_type)
+            .bind(  payload.service_version)
+            .bind( payload.title)
+            .bind( payload.url)
             .fetch_one(&self.conn_pool)
             .await?;
 
-        let image = Image {
-            copyright: res.copyright,
-            explanation: res.explanation,
-            hdurl: res.hdurl,
-            media_type: res.media_type,
-            service_version: res.service_version,
-            title: res.title,
-            url: res.url
+      //  .fetch_one(&self.conn_pool)
+       //     .await?;
+
+        let img = Image {
+            id: Some(ImageId(res.get("id"))) ,
+            copyright: res.get("copyright"),
+            explanation: res.get("explanation"),
+            hdurl: res.get("hdurl"),
+            media_type: res.get("media_type"),
+            service_version: res.get("service_version"),
+            title: res.get("title"),
+            url: res.get("url")
         };
 
-        Ok(image)
+        Ok(img)
     }
 
 
     pub async fn get_image(
         &mut self,
-    ) -> Result<ApiRes, AppError> {
+    ) -> Result<ApiRes, reqwest::Error> {
         let res = ApiRes::get().await?;
 
-        Ok(image)
+        Ok(res)
     }
 
 
 
-
-/*
-    pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
-        let user = sqlx::query_as::<_, User>(
-            r#"
-            SELECT id, email, password, user_role, status FROM users WHERE id = $1
-          "#
-        )
-            .bind(1)
-            .fetch_one(&self.conn_pool)
-            .await?;
-
-        Ok(user)
-    }
-    pub async fn update_status(
+    pub async fn delete_image(
         &mut self,
-        new_status: User,
-    ) -> Result<User, AppError> {
+        image_id: i32,
+    ) -> Result<(), AppError> {
+        let image_id = image_id.into_id();
+        println!("DELETE - Question id is {}", &image_id);
         sqlx::query!(
             r#"
-                UPDATE users
-                SET status = $1
-                WHERE id = $2
+                DELETE FROM images WHERE id = $1
             "#,
-            new_status.status,
-            *new_status.id,
+            image_id.0,
         )
             .execute(&self.conn_pool)
-            .await?;
+            .await.unwrap();
 
-        let row = sqlx::query!(
-            r#"
-                SELECT id, email, password, user_role, status FROM users WHERE email = $1
-            "#,
-            new_status.email,
-        )
-            .fetch_one(&self.conn_pool)
-            .await?;
-
-        let status = User {
-            id: UserId(row.id),
-          email:  row.email,
-            password: row.password,
-            user_role: row.user_role,
-            status: row.status
-        };
-
-        Ok(status)
+        Ok(())
     }
 
-    pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
-        let user = sqlx::query_as::<_, User>(
-            r#"
-            SELECT id, email, password, user_role, status FROM users WHERE id = $1
-          "#
-        )
-            .bind(1)
-            .fetch_one(&self.conn_pool)
-            .await?;
 
-        Ok(user)
-    }
- */
+
+
+
+
+    /*
+        pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
+            let user = sqlx::query_as::<_, User>(
+                r#"
+                SELECT id, email, password, user_role, status FROM users WHERE id = $1
+              "#
+            )
+                .bind(1)
+                .fetch_one(&self.conn_pool)
+                .await?;
+
+            Ok(user)
+        }
+        pub async fn update_status(
+            &mut self,
+            new_status: User,
+        ) -> Result<User, AppError> {
+            sqlx::query!(
+                r#"
+                    UPDATE users
+                    SET status = $1
+                    WHERE id = $2
+                "#,
+                new_status.status,
+                *new_status.id,
+            )
+                .execute(&self.conn_pool)
+                .await?;
+
+            let row = sqlx::query!(
+                r#"
+                    SELECT id, email, password, user_role, status FROM users WHERE email = $1
+                "#,
+                new_status.email,
+            )
+                .fetch_one(&self.conn_pool)
+                .await?;
+
+            let status = User {
+                id: UserId(row.id),
+              email:  row.email,
+                password: row.password,
+                user_role: row.user_role,
+                status: row.status
+            };
+
+            Ok(status)
+        }
+
+        pub async fn get_user_by_questionID(&self, questionID: UserId) -> Result<User, AppError> {
+            let user = sqlx::query_as::<_, User>(
+                r#"
+                SELECT id, email, password, user_role, status FROM users WHERE id = $1
+              "#
+            )
+                .bind(1)
+                .fetch_one(&self.conn_pool)
+                .await?;
+
+            Ok(user)
+        }
+     */
 }
 
 
