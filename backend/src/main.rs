@@ -1,58 +1,32 @@
-mod question;
-mod db;
-mod routes;
-mod error;
-mod layers;
-mod handlers;
-
-use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
-use std::str::FromStr;
-use axum::Router;
-use axum::routing::{get, MethodRouter};
-use hyper::{Body, Method, Response};
-use hyper::server::conn::Http;
-use hyper::service::service_fn;
-use tokio::net::TcpListener;
-use dotenvy::dotenv;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-
+use backend::run_backend;
+use reqwest::Client;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
+//use serde::Deserialize;
+use http::{Request, Response, StatusCode};
+use backend::models::image::ApiRes;
+use axum::{
+    Json,
+    routing::post,
+    Router,
+};
+use serde_json::Value;
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
-    init_logging();
-    
-    let addr = get_host_from_env();
+    //-> anyhow::Result<()>
+    run_backend().await;
 
-    let (cors_layer, trace_layer) = layers::get_layers();
 
-    //let app = Router::new()
-    //    .route("/questions", get(hello_world));
-    let app = routes::get_router().layer(cors_layer).layer(trace_layer);
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    //let res = ApiRes::get().await?;
+    //println!("{:?}", res);
+
+
+    //Ok(())
 
 
 }
 
-async fn hello_world() -> String {
-    "Hello World!".to_string()
-}
-
-fn get_host_from_env() -> SocketAddr {
-    let host = std::env::var("API_HOST").unwrap();
-    let api_host = IpAddr::from_str(&host).unwrap();
-    let api_port: u16 = std::env::var("API_PORT")
-        .expect("Could not find API_PORT in .env file")
-        .parse()
-        .expect("Can't create a u16 from the given API_PORT string");
-
-    SocketAddr::from((api_host, api_port))
-}
 
 fn init_logging() {
     // https://github.com/tokio-rs/axum/blob/main/examples/tracing-aka-logging

@@ -2,4 +2,8 @@
 /backend/target/
 /client/target/
 .env
+<<<<<<< HEAD
 /backend/.env
+=======
+/backend/.env
+>>>>>>> roles
