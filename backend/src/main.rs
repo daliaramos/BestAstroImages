@@ -12,17 +12,17 @@ use axum::{
 };
 use serde_json::Value;
 #[tokio::main]
-async fn main()  {
+async fn main() {
     //-> anyhow::Result<()>
     run_backend().await;
 
 
-/*
-    let res = ApiRes::get().await?;
-    println!("{:?}", res);
-*/
 
-  //  Ok(())
+    //let res = ApiRes::get().await?;
+    //println!("{:?}", res);
+
+
+    //Ok(())
 
 
 }

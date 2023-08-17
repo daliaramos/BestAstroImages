@@ -1,3 +1,39 @@
+###
+DELETE http://localhost:3000/comment?comment_id=1
+Content-Type: application/json
+
+###
+PUT http://localhost:3000/comment
+Content-Type: application/json
+
+{
+  "id": 1,
+  "content": "another comment"
+}
+###
+
+POST http://localhost:3000/comment
+Content-Type: application/json
+
+{
+  "content": "some comment",
+  "post_id": 1
+}
+
+###
+###
+POST http://localhost:3000/post
+Content-Type: application/json
+
+{
+  "title": "a title",
+  "content": "some content"
+}
+
+###
+
+
+
 POST http://localhost:3000/login
 Content-Type: application/json
 

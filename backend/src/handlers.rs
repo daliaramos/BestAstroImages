@@ -19,7 +19,7 @@ use std::fs;
 
 use crate::models::user::{UserSignup, Claims, User, KEYS, UpdateUser, UserCred, OptionalClaims};
 use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById};
-use crate::models::comment::{Comment, CreateComment};
+use crate::models::comment::{Comment, CreateComment, UpdateComment, GetCommentById};
 use crate::models::image::{Image, CreateImage, ApiRes, UpdateImage, GetImageById};
 use crate::template::TEMPLATES;
 
@@ -80,7 +80,7 @@ pub async fn create_post(
     let new_post= am_database.add_post(post.title, post.content).await?;
     Ok(Json(new_post)) //ORM - object relational mapper
 }
-/*
+
 pub async fn update_post(
     State(mut am_database): State<Store>,
     Json(post): Json<UpdatePost>,
@@ -88,9 +88,6 @@ pub async fn update_post(
     let updated_post = am_database.update_post(post).await?;
     Ok(Json(updated_post))
 }
-
-
- */
 
 pub async fn delete_post(
     State(mut am_database): State<Store>,
@@ -107,7 +104,21 @@ pub async fn create_comment(
     Ok(Json(new_comment))
 }
 
+pub async fn update_comment(
+    State(mut am_database): State<Store>,
+    Json(comment): Json<UpdateComment>,
+) -> Result<Json<Comment>, AppError> {
+    let new_comment = am_database.update_comment(comment).await?;
+    Ok(Json(new_comment))
+}
 
+pub async fn delete_comment(
+    State(mut am_database): State<Store>,
+    Query(query): Query<GetCommentById>
+) -> Result<(), AppError> {
+    am_database.delete_comment(query.comment_id).await?;
+    Ok(())
+}
 //Create user account
 pub async fn register(
     State(mut database) : State<Store>,
@@ -245,13 +256,12 @@ pub async fn delete_user(
     }
     Ok(())
 }
-
-
+/*
 pub async fn create_image(
     State(mut am_database): State<Store>,
-    Json(payload): Json<CreateImage>
+   // Json(payload): Json<CreateImage>
 ) -> Result<Json<Image>, AppError> {
-    let new_image= am_database.add_image(payload).await?;
+    let new_image= am_database.get_image().await?;
     Ok(Json(new_image)) //ORM - object relational mapper
 }
 
@@ -262,7 +272,7 @@ pub async fn delete_image(
     am_database.delete_image(query.image_id).await?;
     Ok(())
 }
-/*
+
 pub async fn get_image(
     State(mut am_database): State<Store>,
 ) -> Result<Json<ApiRes>, reqwest::Error> {
@@ -271,8 +281,8 @@ pub async fn get_image(
 }
 
 
- */
-/*
+
+
 pub async fn create_image(
     State(mut am_database): State<Store>,
     extract::Json(payload): extract::Json<CreateImage>) {
@@ -283,8 +293,8 @@ pub async fn create_image(
  */
 /*
 pub async fn check_violation(
-    State(mut am_database): State<Store>,
-    Path(query): Path<i32>,
+     State(mut am_database): State<Store>,
+    Json(user): Json<UpdateUser>,
 ) -> Result<Json<User>, AppError> {
     let all_questions = am_database.get_question_by_id(QuestionId(query)).await?;
 

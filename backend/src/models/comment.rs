@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::make_db_id;
 
 use crate::models::post::PostId;
 
@@ -9,17 +10,22 @@ pub struct Comment {
     pub post_id: PostId,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CommentId(pub i32);
-
-impl From<i32> for CommentId {
-    fn from(value: i32) -> Self {
-        Self(value)
-    }
-}
+make_db_id!(CommentId);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateComment {
     pub content: String,
     pub post_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateComment {
+    pub id: CommentId,
+    pub content: String,
+}
+
+
+#[derive(Deserialize)]
+pub struct GetCommentById {
+    pub comment_id: i32,
 }

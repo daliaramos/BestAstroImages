@@ -13,17 +13,7 @@ use crate::error::AppError;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::decode;
 use crate::models::post::PostId;
-/*
-#[derive(Clone, Debug, Display, Serialize, Deserialize, sqlx::FromRow)]
-#[display(
-fmt = "id: {}, email: {}, password: {}, user_role: {}, status: {}",
-id,
-email,
-password,
-user_role,
-status,
-)]
-*/
+
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct User{
  //   pub id: UserId,
@@ -32,22 +22,7 @@ pub struct User{
     pub user_role: String,
     pub status: String,
 }
-/*
-#[derive(Clone, Copy, Debug, sqlx::Type, Display, derive_more::Deref, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct UserId(pub i32);
 
-impl From<i32> for UserId {
-    fn from(value: i32) -> Self {
-        UserId(value)
-    }
-}
-
-impl From<UserId> for i32 {
-    fn from(value: UserId) -> Self {
-        value.0
-    }
-}
- */
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSignup{
     pub email: String,

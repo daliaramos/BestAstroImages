@@ -5,7 +5,7 @@ use sqlx::{PgPool, Row};
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 use axum::{Json};
-use crate::models::comment::{Comment, CommentId};
+use crate::models::comment::{Comment, CommentId, UpdateComment, IntoCommentId};
 use crate::error::AppError;
 use crate::models::post::{Post, PostId, UpdatePost, CreatePost, GetPostById, IntoPostId};
 use crate::models::image::{IntoImageId, Image, CreateImage, ApiRes, ImageId};
@@ -51,32 +51,6 @@ impl Store {
         Ok(())
     }
 
-    pub async fn add_comments(
-        &mut self,
-        content: String,
-        post_id: i32,
-    ) -> Result<Comment, AppError> {
-        let res = sqlx::query!(
-            r#"
-                INSERT INTO comments (content, post_id)
-                VALUES ($1, $2)
-                RETURNING *
-            "#,
-            content,
-            post_id,
-        )
-            .fetch_one(&self.conn_pool)
-            .await?;
-
-        let comment = Comment {
-            id: CommentId(res.id),
-            content: res.content,
-            post_id: PostId(res.post_id.unwrap()),
-        };
-
-        Ok(comment)
-    }
-
 
     pub async fn get_all_posts(&mut self) -> Result<Vec<Post>, AppError> {
         let rows = sqlx::query!(
@@ -106,7 +80,7 @@ impl Store {
         &mut self,
         id: T,
     ) -> Result<Post, AppError> {
-        let id = id.into_question_id();
+        let id = id.into_id();
 
         let row = sqlx::query!(
             r#"
@@ -150,13 +124,124 @@ impl Store {
         &mut self,
         post_id: i32,
     ) -> Result<(), AppError> {
-        let post_id = post_id.into_question_id();
+        let post_id = IntoPostId::into_id(post_id);
         println!("DELETE - Question id is {}", &post_id);
         sqlx::query!(
             r#"
                 DELETE FROM posts WHERE id = $1
             "#,
             post_id.0,
+        )
+            .execute(&self.conn_pool)
+            .await.unwrap();
+
+        Ok(())
+    }
+
+    pub async fn update_post(
+        &mut self,
+        new_post: UpdatePost,
+    ) -> Result<Post, AppError> {
+        sqlx::query!(
+            r#"
+                UPDATE posts
+                SET title = $1, content = $2
+                WHERE id = $3
+            "#,
+            new_post.title,
+            new_post.content,
+            new_post.id.0,
+        )
+            .execute(&self.conn_pool)
+            .await?;
+
+        let row = sqlx::query!(
+            r#"
+                SELECT title, content, id FROM posts WHERE id = $1
+            "#,
+            new_post.id.0,
+        )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let post = Post {
+            title: row.title,
+            content: row.content,
+            id: PostId(row.id),
+        };
+
+        Ok(post)
+    }
+    pub async fn add_comments(
+        &mut self,
+        content: String,
+        post_id: i32,
+    ) -> Result<Comment, AppError> {
+        let res = sqlx::query!(
+            r#"
+                INSERT INTO comments (content, post_id)
+                VALUES ($1, $2)
+                RETURNING *
+            "#,
+            content,
+            post_id,
+        )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let comment = Comment {
+            id: CommentId(res.id),
+            content: res.content,
+            post_id: PostId(res.post_id.unwrap()),
+        };
+
+        Ok(comment)
+    }
+    pub async fn update_comment(
+        &mut self,
+        new_comment: UpdateComment,
+    ) -> Result<Comment, AppError> {
+        sqlx::query!(
+            r#"
+                UPDATE comments
+                SET content = $1
+                WHERE id = $2
+            "#,
+            new_comment.content,
+            new_comment.id.0,
+        )
+            .execute(&self.conn_pool)
+            .await?;
+
+        let row = sqlx::query!(
+            r#"
+                SELECT id, content, post_id FROM comments WHERE id = $1
+            "#,
+            new_comment.id.0,
+        )
+            .fetch_one(&self.conn_pool)
+            .await?;
+
+        let comments = Comment {
+            content: row.content,
+            post_id: PostId(row.post_id.unwrap()),
+            id: CommentId(row.id),
+        };
+
+        Ok(comments)
+    }
+
+    pub async fn delete_comment(
+        &mut self,
+        comment_id: i32,
+    ) -> Result<(), AppError> {
+        let comment_id = IntoCommentId::into_id(comment_id);
+        println!("DELETE - Question id is {}", &comment_id);
+        sqlx::query!(
+            r#"
+                DELETE FROM comments WHERE id = $1
+            "#,
+            comment_id.0,
         )
             .execute(&self.conn_pool)
             .await.unwrap();
@@ -269,11 +354,13 @@ impl Store {
 
         Ok(())
     }
-
-    pub async fn add_image(
+/*
+    pub async fn get_image(
         &mut self,
-        payload: CreateImage,
+      //  payload: CreateImage,
     ) -> Result<Image, AppError> {
+
+        let payload = ApiRes::get().await?;
 
         //if not in the db then we want to call nasa api
         let res = sqlx::query(
@@ -281,8 +368,7 @@ impl Store {
                 INSERT INTO images (copyright, explanation,hdurl, media_type, service_version, title, url)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *
-            "#
-            /*
+            "#,
             payload.copyright,
             payload.explanation,
             payload.hdurl,
@@ -290,8 +376,6 @@ impl Store {
             payload.service_version,
             payload.title,
             payload.url
-
-             */
         )
             .bind( payload.copyright)
             .bind( payload.explanation)
@@ -321,6 +405,8 @@ impl Store {
     }
 
 
+ */
+/*
     pub async fn get_image(
         &mut self,
     ) -> Result<ApiRes, reqwest::Error> {
@@ -328,14 +414,14 @@ impl Store {
 
         Ok(res)
     }
-
+*/
 
 
     pub async fn delete_image(
         &mut self,
         image_id: i32,
     ) -> Result<(), AppError> {
-        let image_id = image_id.into_id();
+        let image_id = IntoImageId::into_id(image_id);
         println!("DELETE - Question id is {}", &image_id);
         sqlx::query!(
             r#"
